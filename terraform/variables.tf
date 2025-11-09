@@ -120,5 +120,5 @@ variable "api_certificate_arn" {
 variable "github_repo" {
   description = "GitHub repository in format: owner/repo (e.g., username/popmap)"
   type        = string
-  default     = "eugenewdwk/popmap"
+  default     = "eugenedwk/popmap"
 }
