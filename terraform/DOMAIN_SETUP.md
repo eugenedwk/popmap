@@ -1,10 +1,13 @@
 # Domain Setup Guide for popmap.co
 
+**Status:** ✅ **COMPLETE** - Domain is live at https://popmap.co
+
 This guide walks you through setting up your custom domain (popmap.co) with AWS infrastructure.
 
 ## What You'll Get
 
 After setup:
+
 - `https://popmap.co` → React frontend (via CloudFront + S3)
 - `https://www.popmap.co` → Same as above
 - `https://api.popmap.co` → Django backend (to be configured)
@@ -22,6 +25,7 @@ After setup:
 Before deploying, your SSL certificates need to be validated.
 
 **Check certificate status:**
+
 ```bash
 aws acm describe-certificate \
   --certificate-arn arn:aws:acm:us-east-1:730335211951:certificate/bae122c5-61f0-484b-95d2-7bfbd728dad8 \
@@ -46,6 +50,7 @@ aws acm describe-certificate \
 ## Step 2: Update Namecheap Nameservers
 
 Get your Route 53 nameservers:
+
 ```bash
 aws route53 get-hosted-zone --id <YOUR_HOSTED_ZONE_ID>
 ```
@@ -53,6 +58,7 @@ aws route53 get-hosted-zone --id <YOUR_HOSTED_ZONE_ID>
 Or find them in AWS Console: https://console.aws.amazon.com/route53/v2/hostedzones
 
 You'll get 4 nameservers like:
+
 ```
 ns-123.awsdns-12.com
 ns-456.awsdns-45.net
@@ -61,6 +67,7 @@ ns-012.awsdns-01.co.uk
 ```
 
 **Update Namecheap:**
+
 1. Go to [Namecheap Dashboard](https://ap.www.namecheap.com/domains/list/)
 2. Click "Manage" next to popmap.co
 3. Find "Nameservers" section
@@ -73,10 +80,12 @@ ns-012.awsdns-01.co.uk
 ## Step 3: Deploy Infrastructure with Terraform
 
 Your `terraform.tfvars` is already configured with:
+
 - Domain: `popmap.co`
 - Certificate ARNs (both)
 
 **Deploy:**
+
 ```bash
 cd terraform
 
@@ -88,6 +97,7 @@ terraform apply
 ```
 
 This creates:
+
 - S3 bucket: `popmap-frontend`
 - CloudFront distribution with SSL
 - Route 53 A records for popmap.co and www.popmap.co
@@ -115,6 +125,7 @@ terraform output deployment_instructions
 ## Step 5: Deploy Frontend to S3
 
 **Build and deploy:**
+
 ```bash
 # Build React app
 cd ../frontend
@@ -135,6 +146,7 @@ aws cloudfront create-invalidation --distribution-id $CF_DIST --paths "/*"
 ## Step 6: Update Application Configuration
 
 **Frontend `.env`:**
+
 ```bash
 # frontend/.env
 VITE_API_URL=https://api.popmap.co/api
@@ -142,6 +154,7 @@ VITE_GOOGLE_MAPS_API_KEY=your-google-maps-key
 ```
 
 **Backend `.env`:**
+
 ```bash
 # backend/.env
 DEBUG=False
@@ -153,6 +166,7 @@ DATABASE_URL=<from terraform output -raw database_url>
 ## Step 7: Test Your Site
 
 **Check DNS propagation:**
+
 ```bash
 # Should show CloudFront IP addresses
 dig popmap.co
@@ -163,10 +177,12 @@ dig www.popmap.co
 ```
 
 **Visit your site:**
+
 - https://popmap.co ✅
 - https://www.popmap.co ✅
 
 **Expected behavior:**
+
 - Both URLs work with HTTPS (green lock)
 - HTTP redirects to HTTPS
 - React app loads correctly
@@ -176,6 +192,7 @@ dig www.popmap.co
 ### Certificate validation stuck at PENDING_VALIDATION
 
 **Solution:**
+
 1. Go to ACM Console
 2. Click certificate → "Create records in Route 53"
 3. Wait 5-30 minutes
@@ -183,6 +200,7 @@ dig www.popmap.co
 ### DNS not resolving after 24 hours
 
 **Check:**
+
 ```bash
 # Verify nameservers are correct
 dig NS popmap.co
@@ -195,6 +213,7 @@ Should show AWS nameservers. If not, verify Namecheap settings.
 **Likely cause:** S3 bucket policy not applied yet
 
 **Solution:**
+
 ```bash
 terraform apply  # Reapply to ensure all policies are set
 ```
@@ -202,6 +221,7 @@ terraform apply  # Reapply to ensure all policies are set
 ### Site loads but shows old content
 
 **Solution:** Invalidate CloudFront cache
+
 ```bash
 CF_DIST=$(terraform output -raw cloudfront_distribution_id)
 aws cloudfront create-invalidation --distribution-id $CF_DIST --paths "/*"
@@ -210,6 +230,7 @@ aws cloudfront create-invalidation --distribution-id $CF_DIST --paths "/*"
 ## Next Steps: Backend API Domain
 
 The `api.popmap.co` domain is reserved but not yet configured. You'll set this up when deploying your backend to:
+
 - Elastic Beanstalk, or
 - ECS Fargate, or
 - EC2 with Load Balancer
@@ -217,6 +238,7 @@ The `api.popmap.co` domain is reserved but not yet configured. You'll set this u
 The SSL certificate for `api.popmap.co` is already created and validated.
 
 When ready, uncomment the Route 53 record in `terraform/dns.tf`:
+
 ```hcl
 resource "aws_route53_record" "api" {
   zone_id = data.aws_route53_zone.main.zone_id
@@ -254,6 +276,7 @@ aws route53 list-resource-record-sets --hosted-zone-id <ZONE_ID>
 ## Cost Breakdown
 
 **Monthly costs:**
+
 - Route 53 Hosted Zone: $0.50
 - CloudFront (low traffic): $1-5
 - S3 Storage (few GB): $0.10-0.50
@@ -261,12 +284,14 @@ aws route53 list-resource-record-sets --hosted-zone-id <ZONE_ID>
 - **Total: ~$2-6/month for frontend hosting**
 
 **Data transfer costs:**
+
 - First 1 TB/month from CloudFront: $0.085/GB
 - Example: 10,000 page loads (~50MB) = ~$5/month
 
 ## Summary
 
 After completing these steps:
+
 - ✅ Frontend deployed to popmap.co with HTTPS
 - ✅ Global CDN via CloudFront (fast everywhere)
 - ✅ Free SSL certificates (auto-renewed by AWS)

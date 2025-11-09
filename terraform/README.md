@@ -1,10 +1,25 @@
 # PopMap Terraform Infrastructure
 
+**Status:** ✅ **DEPLOYED** - Infrastructure is live and operational
+
 This directory contains Terraform configuration for provisioning AWS infrastructure for the PopMap project, including:
 - VPC with public and private subnets
-- RDS PostgreSQL instance
-- Security groups
-- IAM roles for monitoring
+- RDS PostgreSQL 15.14 instance (db.t3.micro)
+- S3 bucket for frontend hosting
+- CloudFront CDN distribution
+- Route 53 DNS records for popmap.co
+- ACM SSL certificates
+- IAM roles for GitHub Actions CI/CD
+- Security groups and networking
+
+## Current Deployment
+
+**Live Resources:**
+- **Database**: `popmap-dev-db.c2tma4ou6yce.us-east-1.rds.amazonaws.com` (private subnets)
+- **Frontend Bucket**: `popmap-frontend`
+- **CloudFront**: Serving https://popmap.co and https://www.popmap.co
+- **DNS**: Route 53 hosted zone for popmap.co
+- **Region**: us-east-1 (certificates) + us-west-2 (database/VPC)
 
 ## Prerequisites
 

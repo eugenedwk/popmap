@@ -1,5 +1,7 @@
 # CI/CD Setup Guide - GitHub Actions
 
+**Status:** ✅ **COMPLETE** - CI/CD is live and operational
+
 This guide walks you through setting up automated deployments using GitHub Actions with AWS OIDC authentication (no credentials needed!).
 
 ## Overview
@@ -12,10 +14,11 @@ This guide walks you through setting up automated deployments using GitHub Actio
 
 ## Prerequisites
 
-- [x] GitHub repository created (`eugenewdwk/popmap`)
+- [x] GitHub repository created (`eugenedwk/popmap`)
 - [x] AWS infrastructure deployed via Terraform
-- [ ] Terraform applied with CI/CD resources
-- [ ] GitHub secrets configured
+- [x] Terraform applied with CI/CD resources
+- [x] GitHub secrets configured
+- [x] Frontend deployed to https://popmap.co
 
 ## Step 1: Deploy CI/CD Infrastructure with Terraform
 
@@ -42,7 +45,7 @@ terraform output aws_region
 ## Step 2: Configure GitHub Secrets
 
 Go to your GitHub repository settings:
-**https://github.com/eugenewdwk/popmap/settings/secrets/actions**
+**https://github.com/eugenedwk/popmap/settings/secrets/actions**
 
 Click **"New repository secret"** and add each of these:
 
@@ -98,7 +101,7 @@ The workflow file is at `.github/workflows/deploy-frontend.yml`.
 
 ### Manual Test (first time):
 
-1. Go to **https://github.com/eugenewdwk/popmap/actions**
+1. Go to **https://github.com/eugenedwk/popmap/actions**
 2. Click "Deploy Frontend to S3 & CloudFront" workflow
 3. Click "Run workflow" → Select `main` branch → "Run workflow"
 4. Watch the deployment progress
@@ -149,7 +152,7 @@ Update the `AWS_ROLE_ARN_FRONTEND` secret in GitHub with the correct ARN.
 Verify the GitHub repo name in `terraform/variables.tf`:
 ```hcl
 variable "github_repo" {
-  default = "eugenewdwk/popmap"  # Must match exactly!
+  default = "eugenedwk/popmap"  # Must match exactly!
 }
 ```
 
@@ -196,7 +199,7 @@ git push
 
 ✅ **No AWS credentials in GitHub** - Uses OIDC federation
 ✅ **Least privilege IAM policies** - Roles have minimal required permissions
-✅ **Scoped to specific repository** - IAM trust limited to `eugenewdwk/popmap`
+✅ **Scoped to specific repository** - IAM trust limited to `eugenedwk/popmap`
 ✅ **Audit trail** - All deployments logged in CloudWatch
 
 ## Cost
