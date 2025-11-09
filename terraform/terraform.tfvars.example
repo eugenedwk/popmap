@@ -1,0 +1,51 @@
+# AWS Configuration
+aws_region = "us-west-2"  # Change to your preferred region
+
+# Project Configuration
+project_name = "popmap"
+environment  = "dev"  # dev, staging, or prod
+
+# Network Configuration
+vpc_cidr = "10.0.0.0/16"
+
+# REQUIRED: Your IP addresses that can access the database
+# Get your IP from: https://checkip.amazonaws.com or run: curl -s https://checkip.amazonaws.com
+# Format: ["x.x.x.x/32"] for single IP or ["x.x.x.x/32", "y.y.y.y/32"] for multiple IPs
+allowed_cidr_blocks = ["173.66.210.75"]
+
+# Database Configuration
+db_name     = "popmap"
+db_username = "popmap_admin"
+db_password = "CHANGE_THIS_TO_A_STRONG_PASSWORD"  # Use a strong password!
+
+# PostgreSQL Version
+postgres_version = "15.14"
+
+# Instance Configuration
+# Free tier: db.t3.micro (20GB storage included in free tier)
+# Production: db.t3.small or larger
+db_instance_class    = "db.t3.micro"
+db_allocated_storage = 20
+
+# Backup Configuration
+backup_retention_period = 7  # Days to retain backups
+
+# High Availability (for production)
+multi_az = false  # Set to true for production
+
+# Network Access
+# true = publicly accessible (for dev with IP whitelist)
+# false = private only (requires VPN/bastion, recommended for prod)
+publicly_accessible = true
+
+# Monitoring
+monitoring_interval         = 0      # Set to 60 for production (seconds)
+enable_performance_insights = false  # Set to true for production
+
+# Domain and SSL Configuration
+domain_name = "popmap.co"
+
+# SSL Certificate ARNs (from ACM)
+# Get these from: aws acm list-certificates --region us-east-1
+frontend_certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/CERT_ID"
+api_certificate_arn      = "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/CERT_ID"

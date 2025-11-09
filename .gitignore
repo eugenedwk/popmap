@@ -61,5 +61,12 @@ dist-ssr/
 .env.local
 .env.*.local
 
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+terraform.tfvars
+
 # Misc
 .vercel
