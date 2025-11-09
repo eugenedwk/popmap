@@ -115,3 +115,10 @@ variable "api_certificate_arn" {
   description = "ARN of the ACM certificate for API subdomain (api.popmap.co)"
   type        = string
 }
+
+# GitHub Configuration for CI/CD
+variable "github_repo" {
+  description = "GitHub repository in format: owner/repo (e.g., username/popmap)"
+  type        = string
+  default     = "eugenewdwk/popmap"
+}

@@ -116,3 +116,19 @@ output "deployment_instructions" {
        CORS_ALLOWED_ORIGINS=https://${var.domain_name},https://www.${var.domain_name}
   EOT
 }
+
+# CI/CD Outputs
+output "github_actions_role_arn_frontend" {
+  description = "ARN of the IAM role for GitHub Actions frontend deployment"
+  value       = aws_iam_role.github_actions_frontend.arn
+}
+
+output "github_actions_role_arn_backend" {
+  description = "ARN of the IAM role for GitHub Actions backend deployment"
+  value       = aws_iam_role.github_actions_backend.arn
+}
+
+output "aws_region" {
+  description = "AWS region"
+  value       = var.aws_region
+}
