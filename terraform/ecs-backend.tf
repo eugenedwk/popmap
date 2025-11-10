@@ -361,6 +361,10 @@ resource "aws_ecs_task_definition" "backend" {
           value = "https://${var.domain_name},https://www.${var.domain_name}"
         },
         {
+          name  = "CSRF_TRUSTED_ORIGINS"
+          value = "https://${var.domain_name},https://www.${var.domain_name},https://api.${var.domain_name}"
+        },
+        {
           name  = "USE_S3"
           value = "True"
         },

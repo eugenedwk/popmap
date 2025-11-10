@@ -69,3 +69,4 @@ terraform.tfvars
 
 # Misc
 .vercel
+.ai-plans

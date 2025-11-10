@@ -3,15 +3,18 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import { APIProvider } from '@vis.gl/react-google-maps'
 import { eventsApi, businessesApi } from '../services/api'
+import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, MapPin } from 'lucide-react'
+
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
 const eventSchema = z.object({
   title: z.string().min(1, 'Event title is required').max(255),
@@ -32,9 +35,10 @@ const eventSchema = z.object({
   path: ['end_datetime'],
 })
 
-function EventForm() {
+function EventFormContent() {
   const [selectedBusinesses, setSelectedBusinesses] = useState([])
   const [submitStatus, setSubmitStatus] = useState(null) // 'success' | 'error' | null
+  const [selectedPlace, setSelectedPlace] = useState(null)
 
   const { data: businesses, isLoading: businessesLoading } = useQuery({
     queryKey: ['businesses'],
@@ -50,6 +54,7 @@ function EventForm() {
       setSubmitStatus('success')
       form.reset()
       setSelectedBusinesses([])
+      setSelectedPlace(null)
     },
     onError: () => {
       setSubmitStatus('error')
@@ -70,6 +75,18 @@ function EventForm() {
     },
   })
 
+  // Handle place selection from autocomplete
+  const handlePlaceSelect = (place) => {
+    setSelectedPlace(place)
+    form.setValue('address', place.address)
+    form.setValue('latitude', place.latitude.toString())
+    form.setValue('longitude', place.longitude.toString())
+    // Trigger validation
+    form.trigger(['address', 'latitude', 'longitude'])
+  }
+
+  const inputRef = usePlacesAutocomplete(handlePlaceSelect)
+
   const onSubmit = (data) => {
     setSubmitStatus(null)
     const formData = {
@@ -88,11 +105,6 @@ function EventForm() {
 
     setSelectedBusinesses(newSelected)
     form.setValue('business_ids', newSelected)
-  }
-
-  const fillDCCoordinates = () => {
-    form.setValue('latitude', '38.9072')
-    form.setValue('longitude', '-77.0369')
   }
 
   if (businessesLoading) {
@@ -196,60 +208,55 @@ function EventForm() {
                 )}
               />
 
+              {/* Address Autocomplete */}
               <FormField
                 control={form.control}
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address *</FormLabel>
+                    <FormLabel>Event Location *</FormLabel>
                     <FormControl>
-                      <Input placeholder="123 Main St, Washington, DC 20001" {...field} />
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          ref={inputRef}
+                          placeholder="Search for an address..."
+                          className="pl-9"
+                          onChange={(e) => {
+                            field.onChange(e)
+                            // Clear coordinates when user manually types
+                            if (!e.target.value) {
+                              setSelectedPlace(null)
+                              form.setValue('latitude', '')
+                              form.setValue('longitude', '')
+                            }
+                          }}
+                          value={field.value}
+                        />
+                      </div>
                     </FormControl>
+                    <FormDescription>
+                      Start typing to search for an address. The location will be automatically geocoded.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="latitude"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Latitude *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="38.9072" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Display selected coordinates */}
+              {selectedPlace && (
+                <div className="rounded-lg bg-muted p-3 text-sm">
+                  <p className="font-medium text-muted-foreground mb-1">Selected Location:</p>
+                  <p className="text-foreground">{selectedPlace.address}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Coordinates: {selectedPlace.latitude.toFixed(6)}, {selectedPlace.longitude.toFixed(6)}
+                  </p>
+                </div>
+              )}
 
-                <FormField
-                  control={form.control}
-                  name="longitude"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Longitude *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="-77.0369" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={fillDCCoordinates}
-                >
-                  Use DC Center Coordinates
-                </Button>
-              </div>
+              {/* Hidden fields for latitude and longitude */}
+              <input type="hidden" {...form.register('latitude')} />
+              <input type="hidden" {...form.register('longitude')} />
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -310,6 +317,35 @@ function EventForm() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// Wrapper component that provides Google Maps API
+function EventForm() {
+  if (!GOOGLE_MAPS_API_KEY) {
+    return (
+      <div className="max-w-3xl mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-destructive">Configuration Required</CardTitle>
+            <CardDescription>
+              Please add your Google Maps API key to the .env file:
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <code className="block p-2 bg-muted text-sm rounded">
+              VITE_GOOGLE_MAPS_API_KEY=your-key-here
+            </code>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+      <EventFormContent />
+    </APIProvider>
   )
 }
 

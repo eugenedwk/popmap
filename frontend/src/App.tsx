@@ -7,11 +7,13 @@ import BusinessForm from './components/BusinessForm'
 import EventForm from './components/EventForm'
 import BusinessProfile from './components/BusinessProfile'
 
-function App() {
-  const [currentView, setCurrentView] = useState('map')
-  const [selectedBusinessId, setSelectedBusinessId] = useState(null)
+type ViewType = 'list' | 'cards' | 'map' | 'submit-business' | 'submit-event'
 
-  const handleBusinessClick = (businessId) => {
+function App() {
+  const [currentView, setCurrentView] = useState<ViewType>('map')
+  const [selectedBusinessId, setSelectedBusinessId] = useState<number | null>(null)
+
+  const handleBusinessClick = (businessId: number) => {
     setSelectedBusinessId(businessId)
   }
 

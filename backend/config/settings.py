@@ -142,6 +142,13 @@ CORS_ALLOWED_ORIGINS = config(
     cast=Csv()
 )
 
+# CSRF settings for production
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='http://localhost:5173',
+    cast=Csv()
+)
+
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
