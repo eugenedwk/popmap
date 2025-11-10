@@ -1,19 +1,29 @@
 from django.contrib import admin
-from .models import Business, Event
+from .models import Business, Event, Category
+
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'created_at']
+    search_fields = ['name', 'slug']
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ['created_at']
 
 
 @admin.register(Business)
 class BusinessAdmin(admin.ModelAdmin):
-    list_display = ['name', 'contact_email', 'is_verified', 'created_at']
-    list_filter = ['is_verified', 'created_at']
+    list_display = ['name', 'contact_email', 'is_verified', 'get_categories', 'created_at']
+    list_filter = ['is_verified', 'categories', 'created_at']
     search_fields = ['name', 'contact_email', 'description']
     readonly_fields = ['created_at', 'updated_at']
+    filter_horizontal = ['categories']
+
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'description', 'logo')
+            'fields': ('name', 'description', 'logo', 'categories')
         }),
-        ('Contact Details', {
-            'fields': ('contact_email', 'contact_phone', 'website')
+        ('Contact & Social', {
+            'fields': ('contact_email', 'contact_phone', 'website', 'instagram_url')
         }),
         ('Account & Verification', {
             'fields': ('owner', 'is_verified')
@@ -24,18 +34,24 @@ class BusinessAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_categories(self, obj):
+        """Display categories as comma-separated list"""
+        return ", ".join([cat.name for cat in obj.categories.all()])
+    get_categories.short_description = 'Categories'
+
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ['title', 'business', 'start_datetime', 'end_datetime', 'status', 'created_at']
-    list_filter = ['status', 'start_datetime', 'created_at']
-    search_fields = ['title', 'description', 'business__name', 'address']
+    list_display = ['title', 'get_businesses', 'start_datetime', 'end_datetime', 'status', 'created_at']
+    list_filter = ['status', 'start_datetime', 'created_at', 'businesses']
+    search_fields = ['title', 'description', 'businesses__name', 'address']
     readonly_fields = ['created_at', 'updated_at', 'created_by']
     date_hierarchy = 'start_datetime'
+    filter_horizontal = ['businesses']
 
     fieldsets = (
         ('Event Information', {
-            'fields': ('business', 'title', 'description', 'image')
+            'fields': ('businesses', 'title', 'description', 'image')
         }),
         ('Location', {
             'fields': ('address', 'latitude', 'longitude')
@@ -51,6 +67,11 @@ class EventAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    def get_businesses(self, obj):
+        """Display businesses as comma-separated list"""
+        return ", ".join([biz.name for biz in obj.businesses.all()])
+    get_businesses.short_description = 'Businesses'
 
     def save_model(self, request, obj, form, change):
         if not change:  # Only set created_by during the first save

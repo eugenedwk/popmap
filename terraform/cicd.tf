@@ -120,27 +120,62 @@ resource "aws_iam_role" "github_actions_backend" {
   }
 }
 
-# IAM Policy for Backend Deployment (Elastic Beanstalk/ECS - placeholder)
-# Uncomment and customize when backend hosting is set up
-# resource "aws_iam_role_policy" "github_actions_backend" {
-#   name = "backend-deployment"
-#   role = aws_iam_role.github_actions_backend.id
-#
-#   policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Sid    = "ElasticBeanstalkDeploy"
-#         Effect = "Allow"
-#         Action = [
-#           "elasticbeanstalk:*",
-#           "ec2:*",
-#           "autoscaling:*",
-#           "elasticloadbalancing:*",
-#           "s3:*"
-#         ]
-#         Resource = "*"
-#       }
-#     ]
-#   })
-# }
+# IAM Policy for Backend Deployment (ECS)
+resource "aws_iam_role_policy" "github_actions_backend" {
+  name = "backend-deployment"
+  role = aws_iam_role.github_actions_backend.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ECRAccess"
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "ECSDeployment"
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeServices",
+          "ecs:DescribeTaskDefinition",
+          "ecs:DescribeTasks",
+          "ecs:ListTasks",
+          "ecs:RegisterTaskDefinition",
+          "ecs:UpdateService",
+          "ecs:RunTask"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "IAMPassRole"
+        Effect = "Allow"
+        Action = "iam:PassRole"
+        Resource = [
+          aws_iam_role.ecs_task.arn,
+          aws_iam_role.ecs_task_execution.arn
+        ]
+      },
+      {
+        Sid    = "CloudWatchLogs"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "${aws_cloudwatch_log_group.backend.arn}:*"
+      }
+    ]
+  })
+}

@@ -1,31 +1,62 @@
 from rest_framework import serializers
-from .models import Business, Event
+from .models import Business, Event, Category
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug']
 
 
 class BusinessSerializer(serializers.ModelSerializer):
+    categories = CategorySerializer(many=True, read_only=True)
+    category_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Category.objects.all(),
+        source='categories',
+        write_only=True,
+        required=False
+    )
+
     class Meta:
         model = Business
         fields = [
             'id', 'name', 'description', 'contact_email', 'contact_phone',
-            'website', 'logo', 'is_verified', 'created_at'
+            'website', 'instagram_url', 'logo', 'categories', 'category_ids',
+            'is_verified', 'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'is_verified']
 
 
+class BusinessMinimalSerializer(serializers.ModelSerializer):
+    """Minimal business info for event listings"""
+    categories = CategorySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Business
+        fields = ['id', 'name', 'logo', 'instagram_url', 'categories']
+
+
 class EventSerializer(serializers.ModelSerializer):
-    business_name = serializers.CharField(source='business.name', read_only=True)
-    business_logo = serializers.ImageField(source='business.logo', read_only=True)
+    businesses = BusinessMinimalSerializer(many=True, read_only=True)
+    business_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Business.objects.all(),
+        source='businesses',
+        write_only=True,
+        required=False
+    )
 
     class Meta:
         model = Event
         fields = [
-            'id', 'business', 'business_name', 'business_logo',
+            'id', 'businesses', 'business_ids',
             'title', 'description', 'address',
             'latitude', 'longitude',
             'start_datetime', 'end_datetime',
             'image', 'status', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'business_name', 'business_logo']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
     def validate(self, data):
         """Ensure end_datetime is after start_datetime"""
@@ -39,12 +70,16 @@ class EventSerializer(serializers.ModelSerializer):
 
 class EventListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for map markers"""
-    business_name = serializers.CharField(source='business.name', read_only=True)
+    business_names = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
         fields = [
-            'id', 'business_name', 'title',
+            'id', 'business_names', 'title',
             'latitude', 'longitude',
             'start_datetime', 'end_datetime'
         ]
+
+    def get_business_names(self, obj):
+        """Return comma-separated list of business names"""
+        return ", ".join([business.name for business in obj.businesses.all()])

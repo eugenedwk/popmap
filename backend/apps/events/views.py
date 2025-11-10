@@ -31,11 +31,11 @@ class EventViewSet(viewsets.ReadOnlyModelViewSet):
     Phase 1: Read-only, events created via Django admin
     Phase 2: Will add create/update for business event submission
     """
-    queryset = Event.objects.select_related('business').filter(
+    queryset = Event.objects.prefetch_related('businesses').filter(
         status='approved'
     )
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['business', 'status']
+    filterset_fields = ['businesses', 'status']
     ordering_fields = ['start_datetime', 'created_at']
     ordering = ['-start_datetime']
 
