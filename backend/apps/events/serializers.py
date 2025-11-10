@@ -69,17 +69,32 @@ class EventSerializer(serializers.ModelSerializer):
 
 
 class EventListSerializer(serializers.ModelSerializer):
-    """Lightweight serializer for map markers"""
+    """Lightweight serializer for map markers and list views"""
     business_names = serializers.SerializerMethodField()
+    businesses = serializers.SerializerMethodField()
+    categories = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
         fields = [
-            'id', 'business_names', 'title',
+            'id', 'business_names', 'businesses', 'title',
             'latitude', 'longitude',
-            'start_datetime', 'end_datetime'
+            'start_datetime', 'end_datetime',
+            'categories', 'image', 'address'
         ]
 
     def get_business_names(self, obj):
         """Return comma-separated list of business names"""
         return ", ".join([business.name for business in obj.businesses.all()])
+
+    def get_businesses(self, obj):
+        """Return list of businesses with id and name for linking"""
+        return [{'id': business.id, 'name': business.name} for business in obj.businesses.all()]
+
+    def get_categories(self, obj):
+        """Return unique categories from all businesses in this event"""
+        categories_set = set()
+        for business in obj.businesses.all():
+            for category in business.categories.all():
+                categories_set.add(category.name)
+        return sorted(list(categories_set))
