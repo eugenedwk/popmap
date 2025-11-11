@@ -14,6 +14,8 @@ export interface Business {
   contact_phone?: string
   website?: string
   instagram_url?: string
+  tiktok_url?: string
+  available_for_hire: boolean
   logo?: string
   categories: Category[]
   is_verified: boolean
@@ -53,6 +55,8 @@ export interface BusinessFormData {
   contact_phone?: string
   website?: string
   instagram_url?: string
+  tiktok_url?: string
+  available_for_hire?: boolean
   logo?: File
   category_ids: number[]
 }

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
-import { Calendar, Clock, MapPin, Globe, Instagram, Mail, Phone, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { Calendar, Clock, MapPin, Globe, Instagram, Mail, Phone, Loader2, ArrowLeft, CheckCircle2, Video } from 'lucide-react'
 import { formatPhoneNumber } from '@/lib/utils'
 import type { Event } from '../types'
 
@@ -209,6 +209,17 @@ function BusinessProfile() {
                       >
                         <Instagram className="h-4 w-4" />
                         Instagram
+                      </a>
+                    )}
+                    {business.tiktok_url && (
+                      <a
+                        href={business.tiktok_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                      >
+                        <Video className="h-4 w-4" />
+                        TikTok
                       </a>
                     )}
                   </div>

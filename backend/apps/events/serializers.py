@@ -22,8 +22,8 @@ class BusinessSerializer(serializers.ModelSerializer):
         model = Business
         fields = [
             'id', 'name', 'description', 'contact_email', 'contact_phone',
-            'website', 'instagram_url', 'logo', 'categories', 'category_ids',
-            'is_verified', 'created_at'
+            'website', 'instagram_url', 'tiktok_url', 'available_for_hire',
+            'logo', 'categories', 'category_ids', 'is_verified', 'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'is_verified']
 
@@ -34,7 +34,7 @@ class BusinessMinimalSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Business
-        fields = ['id', 'name', 'logo', 'instagram_url', 'categories']
+        fields = ['id', 'name', 'logo', 'instagram_url', 'tiktok_url', 'available_for_hire', 'categories']
 
 
 class EventSerializer(serializers.ModelSerializer):

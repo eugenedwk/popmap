@@ -12,8 +12,8 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Business)
 class BusinessAdmin(admin.ModelAdmin):
-    list_display = ['name', 'contact_email', 'is_verified', 'get_categories', 'created_at']
-    list_filter = ['is_verified', 'categories', 'created_at']
+    list_display = ['name', 'contact_email', 'is_verified', 'available_for_hire', 'get_categories', 'created_at']
+    list_filter = ['is_verified', 'available_for_hire', 'categories', 'created_at']
     search_fields = ['name', 'contact_email', 'description']
     readonly_fields = ['created_at', 'updated_at']
     filter_horizontal = ['categories']
@@ -23,10 +23,10 @@ class BusinessAdmin(admin.ModelAdmin):
             'fields': ('name', 'description', 'logo', 'categories')
         }),
         ('Contact & Social', {
-            'fields': ('contact_email', 'contact_phone', 'website', 'instagram_url')
+            'fields': ('contact_email', 'contact_phone', 'website', 'instagram_url', 'tiktok_url')
         }),
         ('Account & Verification', {
-            'fields': ('owner', 'is_verified')
+            'fields': ('owner', 'is_verified', 'available_for_hire')
         }),
         ('Metadata', {
             'fields': ('created_at', 'updated_at'),

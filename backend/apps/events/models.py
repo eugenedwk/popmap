@@ -39,6 +39,8 @@ class Business(models.Model):
     )
     website = models.URLField(blank=True)
     instagram_url = models.URLField(blank=True, verbose_name="Instagram URL")
+    tiktok_url = models.URLField(blank=True, verbose_name="TikTok URL")
+    available_for_hire = models.BooleanField(default=False, verbose_name="Available for Hire")
     logo = models.ImageField(upload_to='business_logos/', blank=True, null=True)
 
     # Categories (can select multiple)
