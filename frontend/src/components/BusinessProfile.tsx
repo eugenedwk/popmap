@@ -1,22 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
+import { useParams, useNavigate } from 'react-router-dom'
 import { businessesApi, eventsApi } from '../services/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
-import { Calendar, Clock, MapPin, Globe, Instagram, Mail, Phone, Loader2, ArrowLeft } from 'lucide-react'
+import { Calendar, Clock, MapPin, Globe, Instagram, Mail, Phone, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { formatPhoneNumber } from '@/lib/utils'
 import type { Event } from '../types'
 
-interface BusinessProfileProps {
-  businessId: number
-  onBack: () => void
-}
-
-function BusinessProfile({ businessId, onBack }: BusinessProfileProps) {
+function BusinessProfile() {
+  const { businessId: businessIdParam } = useParams<{ businessId: string }>()
+  const navigate = useNavigate()
+  const businessId = businessIdParam ? parseInt(businessIdParam, 10) : null
   const { data: business, isLoading: businessLoading, error: businessError } = useQuery({
     queryKey: ['business', businessId],
     queryFn: async () => {
+      if (!businessId) throw new Error('Business ID is required')
       const response = await businessesApi.getById(businessId)
       return response.data
     },
@@ -27,7 +28,8 @@ function BusinessProfile({ businessId, onBack }: BusinessProfileProps) {
     queryKey: ['events'],
     queryFn: async () => {
       const response = await eventsApi.getAll()
-      return response.data
+      // Handle paginated responses (Django REST Framework)
+      return Array.isArray(response.data) ? response.data : (response.data.results || [])
     },
   })
 
@@ -67,7 +69,7 @@ function BusinessProfile({ businessId, onBack }: BusinessProfileProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={onBack} variant="outline">
+            <Button onClick={() => navigate('/')} variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Go Back
             </Button>
@@ -78,9 +80,20 @@ function BusinessProfile({ businessId, onBack }: BusinessProfileProps) {
   }
 
   // Filter events that include this business
-  const businessEvents = (allEvents?.filter(event =>
-    event.business_names?.includes(business.name)
-  ) || []) as Event[]
+  // Check both the businesses array (by ID) and business_names string (fallback)
+  const businessEvents = (Array.isArray(allEvents) ? allEvents.filter(event => {
+    // First, try to match by business ID in the businesses array
+    if (event.businesses && Array.isArray(event.businesses)) {
+      return event.businesses.some(b => b.id === business.id)
+    }
+    // Fallback to name matching if businesses array is not available
+    if (event.business_names) {
+      // Split by comma and trim to handle comma-separated names
+      const names = event.business_names.split(',').map(n => n.trim())
+      return names.includes(business.name)
+    }
+    return false
+  }) : []) as Event[]
 
   const now = new Date()
 
@@ -106,7 +119,7 @@ function BusinessProfile({ businessId, onBack }: BusinessProfileProps) {
       <ScrollArea className="h-full">
         <div className="max-w-5xl mx-auto p-6">
           {/* Back Button */}
-          <Button onClick={onBack} variant="ghost" className="mb-4">
+          <Button onClick={() => navigate('/')} variant="ghost" className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -133,6 +146,12 @@ function BusinessProfile({ businessId, onBack }: BusinessProfileProps) {
                     <h1 className="text-3xl font-bold">{business.name}</h1>
                     {business.is_verified && (
                       <Badge variant="default" className="mt-1">Verified</Badge>
+                    )}
+                    {business.available_for_hire && (
+                      <Badge variant="default" className="mt-1 bg-green-600 hover:bg-green-700">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Available for Hire
+                      </Badge>
                     )}
                   </div>
 
@@ -167,7 +186,7 @@ function BusinessProfile({ businessId, onBack }: BusinessProfileProps) {
                         className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
                       >
                         <Phone className="h-4 w-4" />
-                        {business.contact_phone}
+                        {formatPhoneNumber(business.contact_phone)}
                       </a>
                     )}
                     {business.website && (

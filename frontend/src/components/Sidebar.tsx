@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import { Calendar, Grid3x3, Map, Store, CalendarPlus } from 'lucide-react'
+import { Calendar, Grid3x3, Map, Store, CalendarPlus, Building2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
 
@@ -7,6 +7,7 @@ const views = [
   { id: 'map', label: 'Map View', icon: Map, description: 'Interactive map' },
   { id: 'list', label: 'List View', icon: Calendar, description: 'Events by date' },
   { id: 'cards', label: 'Card View', icon: Grid3x3, description: 'Events by category' },
+  { id: 'brands', label: 'View Brands', icon: Building2, description: 'Browse businesses' },
 ]
 
 const submitOptions = [
@@ -105,7 +106,7 @@ function Sidebar({ currentView, onViewChange }) {
 }
 
 Sidebar.propTypes = {
-  currentView: PropTypes.oneOf(['list', 'cards', 'map', 'submit-business', 'submit-event']).isRequired,
+  currentView: PropTypes.oneOf(['list', 'cards', 'map', 'brands', 'submit-business', 'submit-event']).isRequired,
   onViewChange: PropTypes.func.isRequired,
 }
 
