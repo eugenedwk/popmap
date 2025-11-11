@@ -44,7 +44,7 @@ function EventFormContent() {
     queryKey: ['businesses'],
     queryFn: async () => {
       const response = await businessesApi.getAll()
-      return response.data
+      return response.data.results || response.data
     },
   })
 

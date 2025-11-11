@@ -31,7 +31,7 @@ function BusinessForm() {
     queryKey: ['categories'],
     queryFn: async () => {
       const response = await categoriesApi.getAll()
-      return response.data
+      return response.data.results || response.data
     },
   })
 

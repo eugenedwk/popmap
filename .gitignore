@@ -71,3 +71,4 @@ terraform.tfvars
 # Misc
 .vercel
 .ai-plans
+frontend/.env.production

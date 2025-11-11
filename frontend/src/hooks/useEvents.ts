@@ -7,7 +7,7 @@ export const useEvents = (): UseQueryResult<Event[], Error> => {
     queryKey: ['events'],
     queryFn: async () => {
       const response = await eventsApi.getAll()
-      return response.data
+      return response.data.results || response.data
     },
   })
 }
@@ -17,7 +17,7 @@ export const useActiveEvents = (): UseQueryResult<Event[], Error> => {
     queryKey: ['events', 'active'],
     queryFn: async () => {
       const response = await eventsApi.getActive()
-      return response.data
+      return response.data.results || response.data
     },
   })
 }
@@ -27,7 +27,7 @@ export const useMapEvents = (): UseQueryResult<Event[], Error> => {
     queryKey: ['events', 'map'],
     queryFn: async () => {
       const response = await eventsApi.getMapData()
-      return response.data
+      return response.data.results || response.data
     },
     refetchInterval: 1000 * 60 * 2, // Refetch every 2 minutes
   })
