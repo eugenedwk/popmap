@@ -28,7 +28,7 @@ class Business(models.Model):
     """
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    contact_email = models.EmailField()
+    contact_email = models.EmailField(blank=True)
     contact_phone = models.CharField(
         max_length=20,
         blank=True,
@@ -82,17 +82,29 @@ class Event(models.Model):
         ('cancelled', 'Cancelled'),
     ]
 
+    # Primary/host business (optional)
+    host_business = models.ForeignKey(
+        Business,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='hosted_events',
+        help_text="Primary business hosting this event (optional)"
+    )
+
     businesses = models.ManyToManyField(
         Business,
+        blank=True,
         related_name='events',
         help_text="Select one or more businesses participating in this event"
     )
 
     # Event details
     title = models.CharField(max_length=255)
-    description = models.TextField()
+    description = models.TextField(blank=True)
 
     # Location
+    location_name = models.CharField(max_length=255, blank=True, help_text="Name of the venue/location (optional)")
     address = models.CharField(max_length=500)
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)

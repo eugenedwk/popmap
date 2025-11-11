@@ -42,19 +42,20 @@ class BusinessAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ['title', 'get_businesses', 'start_datetime', 'end_datetime', 'status', 'created_at']
-    list_filter = ['status', 'start_datetime', 'created_at', 'businesses']
-    search_fields = ['title', 'description', 'businesses__name', 'address']
+    list_display = ['title', 'get_host_business', 'get_businesses', 'start_datetime', 'end_datetime', 'status', 'created_at']
+    list_filter = ['status', 'start_datetime', 'created_at', 'host_business', 'businesses']
+    search_fields = ['title', 'description', 'businesses__name', 'host_business__name', 'address']
     readonly_fields = ['created_at', 'updated_at', 'created_by']
     date_hierarchy = 'start_datetime'
     filter_horizontal = ['businesses']
 
     fieldsets = (
         ('Event Information', {
-            'fields': ('businesses', 'title', 'description', 'image')
+            'fields': ('host_business', 'businesses', 'title', 'description', 'image')
         }),
         ('Location', {
-            'fields': ('address', 'latitude', 'longitude')
+            'fields': ('location_name', 'address', 'latitude', 'longitude'),
+            'description': 'Enter the address and click "Geocode Address" button below to auto-fill coordinates'
         }),
         ('Schedule', {
             'fields': ('start_datetime', 'end_datetime')
@@ -68,10 +69,24 @@ class EventAdmin(admin.ModelAdmin):
         }),
     )
 
+    class Media:
+        js = ('admin/js/geocode.js',)
+        css = {
+            'all': ('admin/css/geocode.css',)
+        }
+
+    def get_host_business(self, obj):
+        """Display host business name"""
+        return obj.host_business.name if obj.host_business else "-"
+    get_host_business.short_description = 'Host'
+
     def get_businesses(self, obj):
         """Display businesses as comma-separated list"""
-        return ", ".join([biz.name for biz in obj.businesses.all()])
-    get_businesses.short_description = 'Businesses'
+        businesses = obj.businesses.all()
+        if businesses:
+            return ", ".join([biz.name for biz in businesses])
+        return "-"
+    get_businesses.short_description = 'Participating Businesses'
 
     def save_model(self, request, obj, form, change):
         if not change:  # Only set created_by during the first save
