@@ -6,6 +6,7 @@ import MapView from './components/MapView'
 import BusinessForm from './components/BusinessForm'
 import EventForm from './components/EventForm'
 import BusinessProfile from './components/BusinessProfile'
+import logo from './noun-cafe-4738717-007435.png'
 
 type ViewType = 'list' | 'cards' | 'map' | 'submit-business' | 'submit-event'
 
@@ -52,8 +53,13 @@ function App() {
   return (
     <div className="h-screen flex flex-col">
       <header className="bg-primary text-primary-foreground p-4 shadow-lg">
-        <h1 className="text-2xl font-bold">PopMap</h1>
-        <p className="text-sm opacity-90">Discover local popup events in Washington DC</p>
+        <div className="flex items-center gap-3">
+          <img src={logo} alt="PopMap Logo" className="h-10 w-10" />
+          <div>
+            <h1 className="text-2xl font-bold">PopMap</h1>
+            <p className="text-sm opacity-90">Discover local popup events in Washington DC</p>
+          </div>
+        </div>
       </header>
       <main className="flex-1 flex overflow-hidden">
         <Sidebar currentView={currentView} onViewChange={setCurrentView} />
