@@ -6,9 +6,14 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { Calendar, Clock, MapPin, Globe, Instagram, Mail, Phone, Loader2, ArrowLeft } from 'lucide-react'
-import PropTypes from 'prop-types'
+import type { Event } from '../types'
 
-function BusinessProfile({ businessId, onBack }) {
+interface BusinessProfileProps {
+  businessId: number
+  onBack: () => void
+}
+
+function BusinessProfile({ businessId, onBack }: BusinessProfileProps) {
   const { data: business, isLoading: businessLoading, error: businessError } = useQuery({
     queryKey: ['business', businessId],
     queryFn: async () => {
@@ -26,7 +31,7 @@ function BusinessProfile({ businessId, onBack }) {
     },
   })
 
-  const formatDate = (dateString) => {
+  function formatDate(dateString: string): string {
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
       month: 'short',
@@ -35,7 +40,7 @@ function BusinessProfile({ businessId, onBack }) {
     })
   }
 
-  const formatTime = (dateString) => {
+  function formatTime(dateString: string): string {
     const date = new Date(dateString)
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
@@ -73,17 +78,28 @@ function BusinessProfile({ businessId, onBack }) {
   }
 
   // Filter events that include this business
-  const businessEvents = allEvents?.filter(event =>
+  const businessEvents = (allEvents?.filter(event =>
     event.business_names?.includes(business.name)
-  ) || []
+  ) || []) as Event[]
 
-  const upcomingEvents = businessEvents.filter(event =>
-    new Date(event.end_datetime) >= new Date()
-  )
+  const now = new Date()
 
-  const pastEvents = businessEvents.filter(event =>
-    new Date(event.end_datetime) < new Date()
-  )
+  // Categorize events: past, present (happening now), and future
+  const pastEvents = businessEvents.filter(event => {
+    const endDate = new Date(event.end_datetime)
+    return endDate < now
+  })
+
+  const presentEvents = businessEvents.filter(event => {
+    const startDate = new Date(event.start_datetime)
+    const endDate = new Date(event.end_datetime)
+    return startDate <= now && endDate >= now
+  })
+
+  const futureEvents = businessEvents.filter(event => {
+    const startDate = new Date(event.start_datetime)
+    return startDate > now
+  })
 
   return (
     <div className="h-full bg-background">
@@ -104,12 +120,21 @@ function BusinessProfile({ businessId, onBack }) {
                     <img
                       src={business.logo}
                       alt={`${business.name} logo`}
-                      className="w-32 h-32 object-cover rounded-lg"
+                      className="w-32 h-32 md:w-40 md:h-40 object-contain rounded-lg border border-border bg-card p-2"
+                      onError={(e) => {
+                        // Hide image if it fails to load
+                        e.currentTarget.style.display = 'none'
+                      }}
                     />
                   </div>
                 )}
                 <div className="flex-1">
-                  <h1 className="text-3xl font-bold mb-2">{business.name}</h1>
+                  <div className="flex items-start gap-3 mb-2">
+                    <h1 className="text-3xl font-bold">{business.name}</h1>
+                    {business.is_verified && (
+                      <Badge variant="default" className="mt-1">Verified</Badge>
+                    )}
+                  </div>
 
                   {/* Categories */}
                   {business.categories && business.categories.length > 0 && (
@@ -175,16 +200,16 @@ function BusinessProfile({ businessId, onBack }) {
 
           {/* Events Section */}
           <div className="space-y-6">
-            {/* Upcoming Events */}
-            {upcomingEvents.length > 0 && (
+            {/* Present Events (Happening Now) */}
+            {presentEvents.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-2xl font-bold">Upcoming Events</h2>
-                  <Badge variant="outline">{upcomingEvents.length}</Badge>
+                  <h2 className="text-2xl font-bold">Happening Now</h2>
+                  <Badge variant="default" className="bg-green-600">{presentEvents.length}</Badge>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {upcomingEvents.map((event) => (
-                    <Card key={event.id} className="hover:shadow-lg transition-shadow">
+                  {presentEvents.map((event) => (
+                    <Card key={event.id} className="border-2 border-green-500 hover:shadow-lg transition-shadow">
                       {event.image && (
                         <div className="relative h-48 overflow-hidden rounded-t-lg">
                           <img
@@ -235,10 +260,73 @@ function BusinessProfile({ businessId, onBack }) {
               </div>
             )}
 
+            {/* Future Events */}
+            {futureEvents.length > 0 && (
+              <>
+                {presentEvents.length > 0 && <Separator className="my-8" />}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <h2 className="text-2xl font-bold">Upcoming Events</h2>
+                    <Badge variant="outline">{futureEvents.length}</Badge>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {futureEvents.map((event) => (
+                      <Card key={event.id} className="hover:shadow-lg transition-shadow">
+                        {event.image && (
+                          <div className="relative h-48 overflow-hidden rounded-t-lg">
+                            <img
+                              src={event.image}
+                              alt={event.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <CardHeader>
+                          <CardTitle className="line-clamp-2">{event.title}</CardTitle>
+                          {event.categories && event.categories.length > 0 && (
+                            <div className="flex gap-1.5 flex-wrap pt-2">
+                              {event.categories.map((category) => (
+                                <Badge key={category} variant="secondary" className="text-xs">
+                                  {category}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-start gap-2 text-muted-foreground">
+                              <Calendar className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <div>{formatDate(event.start_datetime)}</div>
+                                {formatDate(event.start_datetime) !== formatDate(event.end_datetime) && (
+                                  <div>to {formatDate(event.end_datetime)}</div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Clock className="h-4 w-4 flex-shrink-0" />
+                              <span className="line-clamp-1">
+                                {formatTime(event.start_datetime)} - {formatTime(event.end_datetime)}
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-2 text-muted-foreground">
+                              <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                              <span className="line-clamp-2">{event.address}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
             {/* Past Events */}
             {pastEvents.length > 0 && (
               <>
-                {upcomingEvents.length > 0 && <Separator className="my-8" />}
+                {(presentEvents.length > 0 || futureEvents.length > 0) && <Separator className="my-8" />}
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <h2 className="text-2xl font-bold">Past Events</h2>
@@ -289,11 +377,6 @@ function BusinessProfile({ businessId, onBack }) {
       </ScrollArea>
     </div>
   )
-}
-
-BusinessProfile.propTypes = {
-  businessId: PropTypes.number.isRequired,
-  onBack: PropTypes.func.isRequired,
 }
 
 export default BusinessProfile

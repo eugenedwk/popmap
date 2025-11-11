@@ -1,22 +1,48 @@
 import { useState } from 'react'
-import PropTypes from 'prop-types'
+import { useQuery } from '@tanstack/react-query'
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps'
 import { useMapEvents } from '../hooks/useEvents'
+import { eventsApi } from '../services/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Calendar, Clock, MapPin } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import { Calendar, Clock, MapPin, Loader2, X } from 'lucide-react'
+import type { Event } from '../types'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
 // Default center (Washington DC)
 const DEFAULT_CENTER = { lat: 38.9072, lng: -77.0369 }
 
-function MapView({ onBusinessClick }) {
-  const { data: events, isLoading, error } = useMapEvents()
-  const [selectedEvent, setSelectedEvent] = useState(null)
+interface MapViewProps {
+  onBusinessClick?: (businessId: number) => void
+}
 
-  const formatDate = (dateString) => {
+function MapView({ onBusinessClick }: MapViewProps) {
+  const { data: events, isLoading, error } = useMapEvents()
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null)
+  const [infoWindowEvent, setInfoWindowEvent] = useState<Event | null>(null)
+
+  // Fetch full event details when an event is selected
+  const { data: fullEventDetails, isLoading: isLoadingDetails } = useQuery({
+    queryKey: ['event', selectedEventId],
+    queryFn: async () => {
+      if (!selectedEventId) return null
+      const response = await eventsApi.getById(selectedEventId)
+      return response.data
+    },
+    enabled: !!selectedEventId,
+  })
+
+  function formatDate(dateString: string): string {
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
       month: 'short',
@@ -25,12 +51,22 @@ function MapView({ onBusinessClick }) {
     })
   }
 
-  const formatTime = (dateString) => {
+  function formatTime(dateString: string): string {
     const date = new Date(dateString)
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
     })
+  }
+
+  function handleMarkerClick(event: Event) {
+    setInfoWindowEvent(event)
+    setSelectedEventId(event.id)
+  }
+
+  function handleCloseModal() {
+    setSelectedEventId(null)
+    setInfoWindowEvent(null)
   }
 
   if (!GOOGLE_MAPS_API_KEY) {
@@ -89,24 +125,28 @@ function MapView({ onBusinessClick }) {
             <AdvancedMarker
               key={event.id}
               position={{ lat: parseFloat(event.latitude), lng: parseFloat(event.longitude) }}
-              onClick={() => setSelectedEvent(event)}
+              onClick={() => handleMarkerClick(event)}
             />
           ))}
 
-          {selectedEvent && (
+          {/* Minimal InfoWindow for quick preview */}
+          {infoWindowEvent && (
             <InfoWindow
               position={{
-                lat: parseFloat(selectedEvent.latitude),
-                lng: parseFloat(selectedEvent.longitude),
+                lat: parseFloat(infoWindowEvent.latitude),
+                lng: parseFloat(infoWindowEvent.longitude),
               }}
-              onCloseClick={() => setSelectedEvent(null)}
+              onCloseClick={() => {
+                setInfoWindowEvent(null)
+                setSelectedEventId(null)
+              }}
             >
               <div className="p-2 max-w-xs">
-                <h3 className="font-bold text-lg mb-1">{selectedEvent.title}</h3>
+                <h3 className="font-bold text-lg mb-1">{infoWindowEvent.title}</h3>
                 <p className="text-sm text-gray-600 mb-2">
-                  {selectedEvent.businesses && selectedEvent.businesses.length > 0 ? (
+                  {infoWindowEvent.businesses && infoWindowEvent.businesses.length > 0 ? (
                     <span>
-                      {selectedEvent.businesses.map((business, index) => (
+                      {infoWindowEvent.businesses.map((business, index) => (
                         <span key={business.id}>
                           <button
                             onClick={(e) => {
@@ -117,17 +157,17 @@ function MapView({ onBusinessClick }) {
                           >
                             {business.name}
                           </button>
-                          {index < selectedEvent.businesses.length - 1 && ', '}
+                          {index < infoWindowEvent.businesses.length - 1 && ', '}
                         </span>
                       ))}
                     </span>
                   ) : (
-                    selectedEvent.business_names
+                    infoWindowEvent.business_names
                   )}
                 </p>
-                {selectedEvent.categories && selectedEvent.categories.length > 0 && (
+                {infoWindowEvent.categories && infoWindowEvent.categories.length > 0 && (
                   <div className="flex gap-1 flex-wrap mb-2">
-                    {selectedEvent.categories.map((category) => (
+                    {infoWindowEvent.categories.map((category) => (
                       <Badge key={category} variant="secondary" className="text-xs">
                         {category}
                       </Badge>
@@ -135,109 +175,158 @@ function MapView({ onBusinessClick }) {
                   </div>
                 )}
                 <p className="text-sm">
-                  {formatDate(selectedEvent.start_datetime)} - {formatDate(selectedEvent.end_datetime)}
+                  {formatDate(infoWindowEvent.start_datetime)} - {formatDate(infoWindowEvent.end_datetime)}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {formatTime(selectedEvent.start_datetime)}
+                  {formatTime(infoWindowEvent.start_datetime)}
                 </p>
+                <Button
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedEventId(infoWindowEvent.id)
+                  }}
+                >
+                  View Details
+                </Button>
               </div>
             </InfoWindow>
           )}
         </Map>
       </APIProvider>
 
-      {/* Event List Sidebar */}
-      <div className="absolute top-0 right-0 h-full w-80 bg-card border-l border-border shadow-lg">
-        <ScrollArea className="h-full">
-          <div className="p-4">
-            <h2 className="text-xl font-bold mb-1">Events on Map</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              {events?.length || 0} events
-            </p>
-            {isLoading && <p className="text-muted-foreground">Loading...</p>}
-            {events?.length === 0 && !isLoading && (
-              <p className="text-muted-foreground">No events found.</p>
-            )}
-            <div className="space-y-3">
-              {events?.map((event) => (
-                <Card
-                  key={event.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedEvent?.id === event.id ? 'ring-2 ring-primary' : ''
-                  }`}
-                  onClick={() => setSelectedEvent(event)}
-                >
-                  <CardHeader className="p-4 pb-2">
-                    <CardTitle className="text-base line-clamp-2">{event.title}</CardTitle>
-                    <CardDescription className="text-xs line-clamp-1">
-                      {event.businesses && event.businesses.length > 0 ? (
-                        <span>
-                          {event.businesses.map((business, index) => (
-                            <span key={business.id}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onBusinessClick?.(business.id)
-                                }}
-                                className="hover:underline hover:text-primary transition-colors"
-                              >
-                                {business.name}
-                              </button>
-                              {index < event.businesses.length - 1 && ', '}
-                            </span>
-                          ))}
-                        </span>
-                      ) : (
-                        event.business_names
-                      )}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-2">
-                    {event.categories && event.categories.length > 0 && (
-                      <div className="flex gap-1 flex-wrap mb-2">
-                        {event.categories.slice(0, 2).map((category) => (
-                          <Badge key={category} variant="secondary" className="text-xs">
-                            {category}
-                          </Badge>
-                        ))}
-                        {event.categories.length > 2 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{event.categories.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        <span className="line-clamp-1">
-                          {formatDate(event.start_datetime)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span className="line-clamp-1">
-                          {formatTime(event.start_datetime)}
-                        </span>
-                      </div>
-                      <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                        <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                        <span className="line-clamp-1">{event.address}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+      {/* Event Details Modal */}
+      <Dialog open={!!selectedEventId} onOpenChange={(open) => !open && handleCloseModal()}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {isLoadingDetails ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          </div>
-        </ScrollArea>
-      </div>
+          ) : fullEventDetails ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl">{fullEventDetails.title}</DialogTitle>
+                <DialogDescription>
+                  {fullEventDetails.businesses && fullEventDetails.businesses.length > 0 ? (
+                    <span>
+                      {fullEventDetails.businesses.map((business, index) => (
+                        <span key={business.id}>
+                          <button
+                            onClick={() => {
+                              handleCloseModal()
+                              onBusinessClick?.(business.id)
+                            }}
+                            className="hover:underline hover:text-primary transition-colors"
+                          >
+                            {business.name}
+                          </button>
+                          {index < fullEventDetails.businesses.length - 1 && ', '}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    fullEventDetails.business_names
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+
+              {fullEventDetails.image && (
+                <div className="relative w-full h-64 overflow-hidden rounded-lg mb-4">
+                  <img
+                    src={fullEventDetails.image}
+                    alt={fullEventDetails.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
+              {fullEventDetails.categories && fullEventDetails.categories.length > 0 && (
+                <div className="flex gap-2 flex-wrap mb-4">
+                  {fullEventDetails.categories.map((category) => (
+                    <Badge key={category} variant="secondary">
+                      {category}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {fullEventDetails.description && (
+                <div className="mb-4">
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {fullEventDetails.description}
+                  </p>
+                </div>
+              )}
+
+              <Separator className="my-4" />
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Date</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(fullEventDetails.start_datetime)}
+                      {formatDate(fullEventDetails.start_datetime) !== formatDate(fullEventDetails.end_datetime) && (
+                        <> to {formatDate(fullEventDetails.end_datetime)}</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Time</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatTime(fullEventDetails.start_datetime)} - {formatTime(fullEventDetails.end_datetime)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Location</p>
+                    <p className="text-sm text-muted-foreground">{fullEventDetails.address}</p>
+                  </div>
+                </div>
+              </div>
+
+              {fullEventDetails.businesses && fullEventDetails.businesses.length > 0 && (
+                <>
+                  <Separator className="my-4" />
+                  <div>
+                    <p className="text-sm font-medium mb-2">Participating Businesses</p>
+                    <div className="flex flex-wrap gap-2">
+                      {fullEventDetails.businesses.map((business) => (
+                        <Button
+                          key={business.id}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            handleCloseModal()
+                            onBusinessClick?.(business.id)
+                          }}
+                        >
+                          {business.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="py-12 text-center">
+              <p className="text-muted-foreground">Event details not found.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
-}
-
-MapView.propTypes = {
-  onBusinessClick: PropTypes.func,
 }
 
 export default MapView
