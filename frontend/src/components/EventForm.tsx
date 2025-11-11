@@ -6,6 +6,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { APIProvider } from '@vis.gl/react-google-maps'
 import { eventsApi, businessesApi } from '../services/api'
 import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete'
+import { analytics } from '../lib/analytics'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -52,12 +53,14 @@ function EventFormContent() {
     mutationFn: (data) => eventsApi.create(data),
     onSuccess: () => {
       setSubmitStatus('success')
+      analytics.trackFormSubmit('event', true)
       form.reset()
       setSelectedBusinesses([])
       setSelectedPlace(null)
     },
     onError: () => {
       setSubmitStatus('error')
+      analytics.trackFormSubmit('event', false)
     },
   })
 

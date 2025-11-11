@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { businessesApi, categoriesApi } from '../services/api'
+import { analytics } from '../lib/analytics'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -39,11 +40,13 @@ function BusinessForm() {
     mutationFn: (data) => businessesApi.create(data),
     onSuccess: () => {
       setSubmitStatus('success')
+      analytics.trackFormSubmit('business', true)
       form.reset()
       setSelectedCategories([])
     },
     onError: () => {
       setSubmitStatus('error')
+      analytics.trackFormSubmit('business', false)
     },
   })
 

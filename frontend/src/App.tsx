@@ -1,92 +1,110 @@
-import { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import Sidebar from './components/Sidebar'
-import ListView from './components/ListView'
-import CardView from './components/CardView'
-import MapView from './components/MapView'
-import BusinessForm from './components/BusinessForm'
-import EventForm from './components/EventForm'
-import BusinessProfile from './components/BusinessProfile'
-import BrandsView from './components/BrandsView'
-import logo from './noun-cafe-4738717-007435.png'
+import { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import Sidebar from './components/Sidebar';
+import ListView from './components/ListView';
+import CardView from './components/CardView';
+import MapView from './components/MapView';
+import BusinessForm from './components/BusinessForm';
+import EventForm from './components/EventForm';
+import BusinessProfile from './components/BusinessProfile';
+import BrandsView from './components/BrandsView';
+import { trackPageView, analytics } from './lib/analytics';
+import logo from './noun-cafe-4738717-007435.png';
 
-type ViewType = 'list' | 'cards' | 'map' | 'brands' | 'submit-business' | 'submit-event'
+type ViewType =
+  | 'list'
+  | 'cards'
+  | 'map'
+  | 'brands'
+  | 'submit-business'
+  | 'submit-event';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState<ViewType>('map')
-  const navigate = useNavigate()
-  const location = useLocation()
+  const [currentView, setCurrentView] = useState<ViewType>('map');
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleBusinessClick = (businessId: number) => {
-    navigate(`/p/${businessId}`)
-  }
+    analytics.trackBusinessClick(businessId);
+    navigate(`/p/${businessId}`);
+  };
 
-  // Update currentView based on URL path
+  // Track page views and update currentView based on URL path
   useEffect(() => {
-    const path = location.pathname
+    const path = location.pathname;
+    trackPageView(path);
+    
     if (path === '/list' || path.startsWith('/list')) {
-      setCurrentView('list')
+      setCurrentView('list');
     } else if (path === '/cards' || path.startsWith('/cards')) {
-      setCurrentView('cards')
+      setCurrentView('cards');
     } else if (path === '/brands' || path.startsWith('/brands')) {
-      setCurrentView('brands')
+      setCurrentView('brands');
     } else if (path === '/submit-business') {
-      setCurrentView('submit-business')
+      setCurrentView('submit-business');
+      analytics.trackFormView('business');
     } else if (path === '/submit-event') {
-      setCurrentView('submit-event')
+      setCurrentView('submit-event');
+      analytics.trackFormView('event');
     } else if (!path.startsWith('/p/')) {
-      setCurrentView('map')
+      setCurrentView('map');
     }
-  }, [location.pathname])
+  }, [location.pathname]);
 
   const handleViewChange = (view: ViewType) => {
-    setCurrentView(view)
+    analytics.trackViewChange(view);
+    setCurrentView(view);
     if (view === 'list') {
-      navigate('/list')
+      navigate('/list');
     } else if (view === 'cards') {
-      navigate('/cards')
+      navigate('/cards');
     } else if (view === 'brands') {
-      navigate('/brands')
+      navigate('/brands');
     } else if (view === 'submit-business') {
-      navigate('/submit-business')
+      navigate('/submit-business');
     } else if (view === 'submit-event') {
-      navigate('/submit-event')
+      navigate('/submit-event');
     } else {
-      navigate('/')
+      navigate('/');
     }
-  }
+  };
 
   const renderView = () => {
     switch (currentView) {
       case 'list':
-        return <ListView onBusinessClick={handleBusinessClick} />
+        return <ListView onBusinessClick={handleBusinessClick} />;
       case 'cards':
-        return <CardView onBusinessClick={handleBusinessClick} />
+        return <CardView onBusinessClick={handleBusinessClick} />;
       case 'map':
-        return <MapView onBusinessClick={handleBusinessClick} />
+        return <MapView onBusinessClick={handleBusinessClick} />;
       case 'brands':
-        return <BrandsView onBusinessClick={handleBusinessClick} />
+        return <BrandsView onBusinessClick={handleBusinessClick} />;
       case 'submit-business':
-        return <BusinessForm />
+        return <BusinessForm />;
       case 'submit-event':
-        return <EventForm />
+        return <EventForm />;
       default:
-        return <MapView onBusinessClick={handleBusinessClick} />
+        return <MapView onBusinessClick={handleBusinessClick} />;
     }
-  }
+  };
 
   return (
     <div className="h-screen flex flex-col">
       <header className="bg-primary text-primary-foreground p-4 shadow-lg">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            onClick={() => {
+              analytics.trackHomeClick();
+              navigate('/');
+            }}
+            className="flex items-start gap-3 hover:opacity-80 transition-opacity"
           >
             <img src={logo} alt="PopMap Logo" className="h-10 w-10" />
             <div>
               <h1 className="text-2xl font-bold">PopMap</h1>
-              <p className="text-sm opacity-90">Discover local popup events in Washington DC</p>
+              <p className="text-sm opacity-90">
+                Discover local popup events in the DMV region.
+              </p>
             </div>
           </button>
         </div>
@@ -97,7 +115,10 @@ function AppContent() {
             path="/p/:businessId"
             element={
               <>
-                <Sidebar currentView={currentView} onViewChange={handleViewChange} />
+                <Sidebar
+                  currentView={currentView}
+                  onViewChange={handleViewChange}
+                />
                 <div className="flex-1 overflow-auto">
                   <BusinessProfile />
                 </div>
@@ -108,7 +129,10 @@ function AppContent() {
             path="/brands"
             element={
               <>
-                <Sidebar currentView={currentView} onViewChange={handleViewChange} />
+                <Sidebar
+                  currentView={currentView}
+                  onViewChange={handleViewChange}
+                />
                 <div className="flex-1 overflow-auto">
                   <BrandsView onBusinessClick={handleBusinessClick} />
                 </div>
@@ -119,21 +143,22 @@ function AppContent() {
             path="/*"
             element={
               <>
-                <Sidebar currentView={currentView} onViewChange={handleViewChange} />
-                <div className="flex-1 overflow-auto">
-                  {renderView()}
-                </div>
+                <Sidebar
+                  currentView={currentView}
+                  onViewChange={handleViewChange}
+                />
+                <div className="flex-1 overflow-auto">{renderView()}</div>
               </>
             }
           />
         </Routes>
       </main>
     </div>
-  )
+  );
 }
 
 function App() {
-  return <AppContent />
+  return <AppContent />;
 }
 
-export default App
+export default App;
