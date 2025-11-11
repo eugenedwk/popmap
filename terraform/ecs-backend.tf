@@ -354,7 +354,7 @@ resource "aws_ecs_task_definition" "backend" {
         },
         {
           name  = "ALLOWED_HOSTS"
-          value = "api.${var.domain_name},${aws_lb.backend.dns_name}"
+          value = "*"
         },
         {
           name  = "CORS_ALLOWED_ORIGINS"
