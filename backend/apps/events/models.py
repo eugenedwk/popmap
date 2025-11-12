@@ -108,8 +108,8 @@ class Event(models.Model):
     # Location
     location_name = models.CharField(max_length=255, blank=True, help_text="Name of the venue/location (optional)")
     address = models.CharField(max_length=500)
-    latitude = models.DecimalField(max_digits=18, decimal_places=15)
-    longitude = models.DecimalField(max_digits=18, decimal_places=15)
+    latitude = models.DecimalField(max_digits=20, decimal_places=16)
+    longitude = models.DecimalField(max_digits=20, decimal_places=16)
 
     # Timing
     start_datetime = models.DateTimeField()
