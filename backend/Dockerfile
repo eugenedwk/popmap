@@ -48,18 +48,22 @@ WORKDIR /app
 # Copy application code
 COPY --chown=appuser:appuser . .
 
+# Copy and set permissions for entrypoint script
+COPY --chown=appuser:appuser entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Switch to non-root user
 USER appuser
-
-# Collect static files (will use whitenoise in production)
-RUN python manage.py collectstatic --noinput || true
 
 # Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+# Health check - increase start period to allow for migrations
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/api/events/', timeout=2)" || exit 1
 
-# Run gunicorn
+# Use entrypoint script to run migrations before starting server
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# Run gunicorn (passed as arguments to entrypoint script)
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-", "config.wsgi:application"]
