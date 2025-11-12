@@ -19,7 +19,7 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
 const eventSchema = z.object({
   title: z.string().min(1, 'Event title is required').max(255),
-  description: z.string().min(20, 'Description must be at least 20 characters'),
+  description: z.string().optional(),
   address: z.string().min(1, 'Address is required').max(500),
   latitude: z.string().regex(/^-?\d+\.?\d*$/, 'Invalid latitude'),
   longitude: z.string().regex(/^-?\d+\.?\d*$/, 'Invalid longitude'),
@@ -173,15 +173,15 @@ function EventFormContent() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description *</FormLabel>
+                    <FormLabel>Description</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Describe your popup event..."
+                        placeholder="Describe your popup event... (optional)"
                         className="min-h-[120px]"
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>Minimum 20 characters</FormDescription>
+                    <FormDescription>Optional - Add details about your event</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
