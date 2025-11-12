@@ -1,33 +1,69 @@
-import PropTypes from 'prop-types'
-import { Calendar, Grid3x3, Map, Store, CalendarPlus, Building2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Separator } from '@/components/ui/separator'
+import PropTypes from 'prop-types';
+import {
+  Calendar,
+  Grid3x3,
+  Map,
+  Store,
+  CalendarPlus,
+  Building2,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 const views = [
   { id: 'map', label: 'Map View', icon: Map, description: 'Interactive map' },
-  { id: 'list', label: 'List View', icon: Calendar, description: 'Events by date' },
-  { id: 'cards', label: 'Card View', icon: Grid3x3, description: 'Events by category' },
-  { id: 'brands', label: 'View Brands', icon: Building2, description: 'Browse businesses' },
-]
+  {
+    id: 'list',
+    label: 'List View',
+    icon: Calendar,
+    description: 'Events by date',
+  },
+  {
+    id: 'cards',
+    label: 'Card View',
+    icon: Grid3x3,
+    description: 'Events by category',
+  },
+  {
+    id: 'brands',
+    label: 'View Brands',
+    icon: Building2,
+    description: 'Browse businesses',
+  },
+];
 
 const submitOptions = [
-  { id: 'submit-business', label: 'Register Business', icon: Store, description: 'Add your business' },
-  { id: 'submit-event', label: 'Submit Event', icon: CalendarPlus, description: 'Create a popup event' },
-]
+  {
+    id: 'submit-business',
+    label: 'Register Business',
+    icon: Store,
+    description: 'Add your business',
+  },
+  {
+    id: 'submit-event',
+    label: 'Submit Event',
+    icon: CalendarPlus,
+    description: 'Create a popup event',
+  },
+];
 
 function Sidebar({ currentView, onViewChange }) {
   return (
     <div className="w-16 md:w-64 bg-card border-r border-border h-full flex flex-col">
       <div className="p-3 md:p-6 border-b border-border">
         <h2 className="hidden md:block text-lg font-semibold">Navigation</h2>
-        <p className="hidden md:block text-sm text-muted-foreground">Browse events or submit your own</p>
+        <p className="hidden md:block text-sm text-muted-foreground">
+          Browse events or submit your own
+        </p>
       </div>
       <nav className="flex-1 p-2 md:p-4 overflow-auto">
         <div className="mb-6">
-          <h3 className="hidden md:block text-xs font-semibold text-muted-foreground mb-2 px-4">VIEW EVENTS</h3>
+          <h3 className="hidden md:block text-xs font-semibold text-muted-foreground mb-2 px-4">
+            VIEW EVENTS
+          </h3>
           <ul className="space-y-2">
             {views.map((view) => {
-              const Icon = view.icon
+              const Icon = view.icon;
               return (
                 <li key={view.id}>
                   <button
@@ -56,7 +92,7 @@ function Sidebar({ currentView, onViewChange }) {
                     </div>
                   </button>
                 </li>
-              )
+              );
             })}
           </ul>
         </div>
@@ -64,10 +100,12 @@ function Sidebar({ currentView, onViewChange }) {
         <Separator className="my-4" />
 
         <div>
-          <h3 className="hidden md:block text-xs font-semibold text-muted-foreground mb-2 px-4">SUBMIT</h3>
+          <h3 className="hidden md:block text-xs font-semibold text-muted-foreground mb-2 px-4">
+            SUBMIT
+          </h3>
           <ul className="space-y-2">
             {submitOptions.map((option) => {
-              const Icon = option.icon
+              const Icon = option.icon;
               return (
                 <li key={option.id}>
                   <button
@@ -96,18 +134,25 @@ function Sidebar({ currentView, onViewChange }) {
                     </div>
                   </button>
                 </li>
-              )
+              );
             })}
           </ul>
         </div>
       </nav>
     </div>
-  )
+  );
 }
 
 Sidebar.propTypes = {
-  currentView: PropTypes.oneOf(['list', 'cards', 'map', 'brands', 'submit-business', 'submit-event']).isRequired,
+  currentView: PropTypes.oneOf([
+    'list',
+    'cards',
+    'map',
+    'brands',
+    'submit-business',
+    'submit-event',
+  ]).isRequired,
   onViewChange: PropTypes.func.isRequired,
-}
+};
 
-export default Sidebar
+export default Sidebar;
