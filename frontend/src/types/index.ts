@@ -26,6 +26,7 @@ export interface Business {
 export interface BusinessMinimal {
   id: number
   name: string
+  logo?: string
   categories: Category[]
 }
 

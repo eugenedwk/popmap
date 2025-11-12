@@ -88,10 +88,11 @@ class EventListSerializer(serializers.ModelSerializer):
         return ", ".join([business.name for business in obj.businesses.all()])
 
     def get_businesses(self, obj):
-        """Return list of businesses with id, name, and categories for linking and filtering"""
+        """Return list of businesses with id, name, logo, and categories for linking and filtering"""
         return [{
             'id': business.id,
             'name': business.name,
+            'logo': business.logo.url if business.logo else None,
             'categories': [{'id': cat.id, 'name': cat.name, 'slug': cat.slug} for cat in business.categories.all()]
         } for business in obj.businesses.all()]
 

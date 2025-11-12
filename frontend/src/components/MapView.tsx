@@ -142,6 +142,15 @@ function MapView({ onBusinessClick }: MapViewProps) {
               }}
             >
               <div className="p-2 max-w-xs">
+                {infoWindowEvent.image && (
+                  <div className="relative w-full h-32 overflow-hidden rounded-md mb-2">
+                    <img
+                      src={infoWindowEvent.image}
+                      alt={infoWindowEvent.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
                 <h3 className="font-bold text-lg mb-1">{infoWindowEvent.title}</h3>
                 <p className="text-sm text-gray-600 mb-2">
                   {infoWindowEvent.businesses && infoWindowEvent.businesses.length > 0 ? (
@@ -309,7 +318,15 @@ function MapView({ onBusinessClick }: MapViewProps) {
                             handleCloseModal()
                             onBusinessClick?.(business.id)
                           }}
+                          className="flex items-center gap-2"
                         >
+                          {business.logo && (
+                            <img
+                              src={business.logo}
+                              alt={`${business.name} logo`}
+                              className="w-5 h-5 rounded-full object-cover"
+                            />
+                          )}
                           {business.name}
                         </Button>
                       ))}
