@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { businessesApi, categoriesApi } from '../services/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -24,8 +24,23 @@ interface BrandsViewProps {
 
 function BrandsView({ onBusinessClick }: BrandsViewProps) {
   const navigate = useNavigate()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Initialize state from URL params
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
+  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'all')
+
+  // Update URL params when filters change
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (searchQuery) {
+      params.set('search', searchQuery)
+    }
+    if (selectedCategory && selectedCategory !== 'all') {
+      params.set('category', selectedCategory)
+    }
+    setSearchParams(params, { replace: true })
+  }, [searchQuery, selectedCategory, setSearchParams])
 
   // Fetch businesses
   const { data: businesses, isLoading: businessesLoading, error: businessesError } = useQuery({

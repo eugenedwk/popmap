@@ -1,12 +1,70 @@
 import PropTypes from 'prop-types'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useActiveEvents } from '../hooks/useEvents'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Calendar, Clock, MapPin } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Calendar, Clock, MapPin, Search } from 'lucide-react'
 
 function CardView({ onBusinessClick }) {
   const { data: events, isLoading, error } = useActiveEvents()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Initialize state from URL params
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all')
+
+  // Update URL params when filters change
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (searchQuery) {
+      params.set('search', searchQuery)
+    }
+    if (selectedCategory && selectedCategory !== 'all') {
+      params.set('category', selectedCategory)
+    }
+    setSearchParams(params, { replace: true })
+  }, [searchQuery, selectedCategory, setSearchParams])
+
+  // Filter events based on search and category
+  const filteredEvents = useMemo(() => {
+    if (!events) return []
+
+    return events.filter((event) => {
+      // Search filter
+      const matchesSearch =
+        searchQuery === '' ||
+        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.address?.toLowerCase().includes(searchQuery.toLowerCase())
+
+      // Category filter
+      const matchesCategory =
+        selectedCategory === 'all' ||
+        event.categories?.includes(selectedCategory)
+
+      return matchesSearch && matchesCategory
+    })
+  }, [events, searchQuery, selectedCategory])
+
+  // Extract unique categories from events
+  const availableCategories = useMemo(() => {
+    if (!events) return []
+    const categorySet = new Set()
+    events.forEach((event) => {
+      event.categories?.forEach((cat) => categorySet.add(cat))
+    })
+    return Array.from(categorySet).sort()
+  }, [events])
 
   const formatDate = (dateString) => {
     const date = new Date(dateString)
@@ -70,7 +128,7 @@ function CardView({ onBusinessClick }) {
     )
   }
 
-  const groupedEvents = groupEventsByCategory(events)
+  const groupedEvents = groupEventsByCategory(filteredEvents)
   const categories = Object.keys(groupedEvents).sort()
 
   return (
@@ -79,16 +137,47 @@ function CardView({ onBusinessClick }) {
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Events by Category</h1>
           <p className="text-muted-foreground">
-            Browse {events?.length || 0} events across {categories.length} categories
+            Showing {filteredEvents.length} of {events?.length || 0} events across {categories.length} {categories.length === 1 ? 'category' : 'categories'}
           </p>
         </div>
 
-        <ScrollArea className="h-[calc(100vh-12rem)]">
+        {/* Search and Filter Controls */}
+        <div className="mb-6 space-y-4 md:space-y-0 md:flex md:gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search events..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="w-full md:w-64">
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {availableCategories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <ScrollArea className="h-[calc(100vh-20rem)]">
           {categories.length === 0 ? (
             <Card>
               <CardContent className="pt-6">
                 <p className="text-center text-muted-foreground">
-                  No upcoming events found.
+                  {searchQuery || selectedCategory !== 'all'
+                    ? 'No events found matching your filters.'
+                    : 'No upcoming events found.'}
                 </p>
               </CardContent>
             </Card>
