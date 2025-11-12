@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { businessesApi, eventsApi } from '../services/api'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -13,7 +14,9 @@ import type { Event } from '../types'
 function BusinessProfile() {
   const { businessId: businessIdParam } = useParams<{ businessId: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const businessId = businessIdParam ? parseInt(businessIdParam, 10) : null
+  const [joiningEventId, setJoiningEventId] = useState<number | null>(null)
   const { data: business, isLoading: businessLoading, error: businessError } = useQuery({
     queryKey: ['business', businessId],
     queryFn: async () => {
@@ -30,6 +33,24 @@ function BusinessProfile() {
       const response = await eventsApi.getAll()
       // Handle paginated responses (Django REST Framework)
       return Array.isArray(response.data) ? response.data : (response.data.results || [])
+    },
+  })
+
+  // Mutation for joining events
+  const joinEventMutation = useMutation({
+    mutationFn: ({ eventId, businessId }: { eventId: number; businessId: number }) =>
+      eventsApi.joinEvent(eventId, businessId),
+    onMutate: ({ eventId }) => {
+      setJoiningEventId(eventId)
+    },
+    onSuccess: () => {
+      // Refetch events to update the UI
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+      setJoiningEventId(null)
+    },
+    onError: (error) => {
+      console.error('Failed to join event:', error)
+      setJoiningEventId(null)
     },
   })
 
@@ -113,6 +134,27 @@ function BusinessProfile() {
     const startDate = new Date(event.start_datetime)
     return startDate > now
   })
+
+  // Filter available events (future events that the business is NOT part of)
+  const availableEvents = (Array.isArray(allEvents) ? allEvents.filter(event => {
+    const startDate = new Date(event.start_datetime)
+    const endDate = new Date(event.end_datetime)
+
+    // Only show future/ongoing events
+    if (endDate < now) return false
+
+    // Check if business is not already part of this event
+    if (event.businesses && Array.isArray(event.businesses)) {
+      return !event.businesses.some(b => b.id === business.id)
+    }
+    return true
+  }) : []) as Event[]
+
+  const handleJoinEvent = (eventId: number) => {
+    if (businessId) {
+      joinEventMutation.mutate({ eventId, businessId })
+    }
+  }
 
   return (
     <div className="h-full bg-background">
@@ -227,6 +269,76 @@ function BusinessProfile() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Available Events to Join - Hidden until authentication is implemented */}
+          {false && availableEvents.length > 0 && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Available Events to Join</CardTitle>
+                    <CardDescription>
+                      Join these upcoming events to expand your presence
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline">{availableEvents.length}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {availableEvents.map((event) => (
+                    <Card key={event.id} className="hover:shadow-md transition-shadow">
+                      {event.image && (
+                        <div className="relative h-32 overflow-hidden rounded-t-lg">
+                          <img
+                            src={event.image}
+                            alt={event.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base line-clamp-2">{event.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="space-y-1 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              <span>{formatDate(event.start_datetime)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-3 w-3" />
+                              <span>{formatTime(event.start_datetime)}</span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                              <span className="line-clamp-1">{event.address}</span>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleJoinEvent(event.id)}
+                            disabled={joiningEventId === event.id}
+                          >
+                            {joiningEventId === event.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Joining...
+                              </>
+                            ) : (
+                              'Join Event'
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Events Section */}
           <div className="space-y-6">

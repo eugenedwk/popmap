@@ -1,6 +1,7 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -121,3 +122,95 @@ class EventViewSet(viewsets.ModelViewSet):
         )
         serializer = EventListSerializer(events, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def join(self, request, pk=None):
+        """Allow a business owner to join their business to an existing event"""
+        event = self.get_object()
+        business_id = request.data.get('business_id')
+
+        if not business_id:
+            return Response(
+                {'error': 'business_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            business = Business.objects.get(id=business_id, is_verified=True)
+        except Business.DoesNotExist:
+            return Response(
+                {'error': 'Business not found or not verified'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check if the authenticated user owns this business
+        if business.owner != request.user:
+            return Response(
+                {'error': 'You do not have permission to manage this business'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Check if business is already part of the event
+        if event.businesses.filter(id=business_id).exists():
+            return Response(
+                {'message': 'Business is already part of this event'},
+                status=status.HTTP_200_OK
+            )
+
+        # Add business to event
+        event.businesses.add(business)
+
+        return Response(
+            {
+                'message': f'{business.name} has successfully joined the event',
+                'event_id': event.id,
+                'business_id': business.id
+            },
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def leave(self, request, pk=None):
+        """Allow a business owner to remove their business from an event"""
+        event = self.get_object()
+        business_id = request.data.get('business_id')
+
+        if not business_id:
+            return Response(
+                {'error': 'business_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            business = Business.objects.get(id=business_id)
+        except Business.DoesNotExist:
+            return Response(
+                {'error': 'Business not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check if the authenticated user owns this business
+        if business.owner != request.user:
+            return Response(
+                {'error': 'You do not have permission to manage this business'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Check if business is part of the event
+        if not event.businesses.filter(id=business_id).exists():
+            return Response(
+                {'message': 'Business is not part of this event'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Remove business from event
+        event.businesses.remove(business)
+
+        return Response(
+            {
+                'message': f'{business.name} has left the event',
+                'event_id': event.id,
+                'business_id': business.id
+            },
+            status=status.HTTP_200_OK
+        )

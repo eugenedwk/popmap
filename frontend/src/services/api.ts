@@ -56,6 +56,10 @@ export const eventsApi = {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
   },
+  joinEvent: (eventId: number, businessId: number): Promise<AxiosResponse<{ message: string; event_id: number; business_id: number }>> =>
+    apiClient.post(`/events/${eventId}/join/`, { business_id: businessId }),
+  leaveEvent: (eventId: number, businessId: number): Promise<AxiosResponse<{ message: string; event_id: number; business_id: number }>> =>
+    apiClient.post(`/events/${eventId}/leave/`, { business_id: businessId }),
 }
 
 export default apiClient
