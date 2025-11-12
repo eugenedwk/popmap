@@ -47,23 +47,33 @@ function CardView({ onBusinessClick }) {
         event.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.address?.toLowerCase().includes(searchQuery.toLowerCase())
 
-      // Category filter
+      // Category filter - check if any business has the selected category
       const matchesCategory =
         selectedCategory === 'all' ||
-        event.categories?.includes(selectedCategory)
+        event.businesses?.some((business) =>
+          business.categories?.some((cat) => cat.id.toString() === selectedCategory)
+        )
 
       return matchesSearch && matchesCategory
     })
   }, [events, searchQuery, selectedCategory])
 
-  // Extract unique categories from events
+  // Extract unique categories from all businesses in events
   const availableCategories = useMemo(() => {
     if (!events) return []
-    const categorySet = new Set()
+    const categoriesMap = new Map()
     events.forEach((event) => {
-      event.categories?.forEach((cat) => categorySet.add(cat))
+      event.businesses?.forEach((business) => {
+        business.categories?.forEach((cat) => {
+          if (!categoriesMap.has(cat.id)) {
+            categoriesMap.set(cat.id, cat.name)
+          }
+        })
+      })
     })
-    return Array.from(categorySet).sort()
+    return Array.from(categoriesMap.entries())
+      .map(([id, name]) => ({ id: id.toString(), name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
   }, [events])
 
   const formatDate = (dateString) => {
@@ -161,8 +171,8 @@ function CardView({ onBusinessClick }) {
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
                 {availableCategories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
                   </SelectItem>
                 ))}
               </SelectContent>
