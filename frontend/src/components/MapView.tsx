@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps'
 import { useMapEvents } from '../hooks/useEvents'
 import { eventsApi } from '../services/api'
@@ -27,6 +28,7 @@ interface MapViewProps {
 }
 
 function MapView({ onBusinessClick }: MapViewProps) {
+  const navigate = useNavigate()
   const { data: events, isLoading, error } = useMapEvents()
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null)
   const [infoWindowEvent, setInfoWindowEvent] = useState<Event | null>(null)
@@ -194,7 +196,7 @@ function MapView({ onBusinessClick }: MapViewProps) {
                   className="mt-2 w-full"
                   onClick={(e) => {
                     e.stopPropagation()
-                    setSelectedEventId(infoWindowEvent.id)
+                    navigate(`/e/${infoWindowEvent.id}`)
                   }}
                 >
                   View Details

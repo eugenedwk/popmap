@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types'
 import { useState, useMemo, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useActiveEvents } from '../hooks/useEvents'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -17,6 +17,7 @@ import {
 import { Calendar, Clock, MapPin, Search } from 'lucide-react'
 
 function ListView({ onBusinessClick }) {
+  const navigate = useNavigate()
   const { data: events, isLoading, error } = useActiveEvents()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -195,7 +196,11 @@ function ListView({ onBusinessClick }) {
                   </div>
                   <div className="space-y-3">
                     {groupedEvents[dateKey].map((event) => (
-                      <Card key={event.id} className="hover:shadow-md transition-shadow">
+                      <Card
+                        key={event.id}
+                        className="hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => navigate(`/e/${event.id}`)}
+                      >
                         <CardHeader>
                           <div className="flex justify-between items-start gap-4">
                             <div className="flex-1">

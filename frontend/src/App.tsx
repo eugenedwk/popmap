@@ -7,6 +7,7 @@ import MapView from './components/MapView';
 import BusinessForm from './components/BusinessForm';
 import EventForm from './components/EventForm';
 import BusinessProfile from './components/BusinessProfile';
+import EventDetailPage from './components/EventDetailPage';
 import BrandsView from './components/BrandsView';
 import { trackPageView, analytics } from './lib/analytics';
 import logo from './noun-cafe-4738717-007435.png';
@@ -33,7 +34,7 @@ function AppContent() {
   useEffect(() => {
     const path = location.pathname;
     trackPageView(path);
-    
+
     if (path === '/list' || path.startsWith('/list')) {
       setCurrentView('list');
     } else if (path === '/cards' || path.startsWith('/cards')) {
@@ -46,7 +47,7 @@ function AppContent() {
     } else if (path === '/submit-event') {
       setCurrentView('submit-event');
       analytics.trackFormView('event');
-    } else if (!path.startsWith('/p/')) {
+    } else if (!path.startsWith('/p/') && !path.startsWith('/e/')) {
       setCurrentView('map');
     }
   }, [location.pathname]);
@@ -121,6 +122,20 @@ function AppContent() {
                 />
                 <div className="flex-1 overflow-auto">
                   <BusinessProfile />
+                </div>
+              </>
+            }
+          />
+          <Route
+            path="/e/:eventId"
+            element={
+              <>
+                <Sidebar
+                  currentView={currentView}
+                  onViewChange={handleViewChange}
+                />
+                <div className="flex-1 overflow-auto">
+                  <EventDetailPage />
                 </div>
               </>
             }

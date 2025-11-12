@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types'
 import { useState, useMemo, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useActiveEvents } from '../hooks/useEvents'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +16,7 @@ import {
 import { Calendar, Clock, MapPin, Search } from 'lucide-react'
 
 function CardView({ onBusinessClick }) {
+  const navigate = useNavigate()
   const { data: events, isLoading, error } = useActiveEvents()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -206,7 +207,11 @@ function CardView({ onBusinessClick }) {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {groupedEvents[category].map((event) => (
-                      <Card key={`${category}-${event.id}`} className="hover:shadow-lg transition-shadow">
+                      <Card
+                        key={`${category}-${event.id}`}
+                        className="hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => navigate(`/e/${event.id}`)}
+                      >
                         {event.image && (
                           <div className="relative h-48 overflow-hidden rounded-t-lg">
                             <img

@@ -351,7 +351,11 @@ function BusinessProfile() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {presentEvents.map((event) => (
-                    <Card key={event.id} className="border-2 border-green-500 hover:shadow-lg transition-shadow">
+                    <Card
+                      key={event.id}
+                      className="border-2 border-green-500 hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/e/${event.id}`)}
+                    >
                       {event.image && (
                         <div className="relative h-48 overflow-hidden rounded-t-lg">
                           <img
@@ -413,7 +417,11 @@ function BusinessProfile() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {futureEvents.map((event) => (
-                      <Card key={event.id} className="hover:shadow-lg transition-shadow">
+                      <Card
+                        key={event.id}
+                        className="hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => navigate(`/e/${event.id}`)}
+                      >
                         {event.image && (
                           <div className="relative h-48 overflow-hidden rounded-t-lg">
                             <img
@@ -476,7 +484,11 @@ function BusinessProfile() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {pastEvents.map((event) => (
-                      <Card key={event.id} className="opacity-75 hover:opacity-100 transition-opacity">
+                      <Card
+                        key={event.id}
+                        className="opacity-75 hover:opacity-100 transition-opacity cursor-pointer"
+                        onClick={() => navigate(`/e/${event.id}`)}
+                      >
                         {event.image && (
                           <div className="relative h-32 overflow-hidden rounded-t-lg">
                             <img
