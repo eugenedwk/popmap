@@ -97,7 +97,8 @@ function Sidebar({ currentView, onViewChange }) {
           </ul>
         </div>
 
-        <Separator className="my-4" />
+        {/* Temporarily hidden - Submit Business and Event forms */}
+        {/* <Separator className="my-4" />
 
         <div>
           <h3 className="hidden md:block text-xs font-semibold text-muted-foreground mb-2 px-4">
@@ -137,7 +138,7 @@ function Sidebar({ currentView, onViewChange }) {
               );
             })}
           </ul>
-        </div>
+        </div> */}
       </nav>
     </div>
   );

@@ -98,6 +98,12 @@ export const eventsApi = {
     apiClient.post(`/events/${eventId}/join/`, { business_id: businessId }),
   leaveEvent: (eventId: number, businessId: number): Promise<AxiosResponse<{ message: string; event_id: number; business_id: number }>> =>
     apiClient.post(`/events/${eventId}/leave/`, { business_id: businessId }),
+  rsvp: (eventId: number, status: 'interested' | 'going'): Promise<AxiosResponse<ApiResponse<any>>> =>
+    apiClient.post(`/events/${eventId}/rsvp/`, { status }),
+  cancelRsvp: (eventId: number): Promise<AxiosResponse<{ message: string }>> =>
+    apiClient.delete(`/events/${eventId}/cancel_rsvp/`),
+  getMyRsvps: (): Promise<AxiosResponse<any[]>> =>
+    apiClient.get('/events/my_rsvps/'),
 }
 
 export default apiClient

@@ -5,12 +5,13 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Business, Event, Category
+from .models import Business, Event, Category, EventRSVP
 from .serializers import (
     BusinessSerializer,
     EventSerializer,
     EventListSerializer,
-    CategorySerializer
+    CategorySerializer,
+    EventRSVPSerializer
 )
 
 
@@ -214,3 +215,61 @@ class EventViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK
         )
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def rsvp(self, request, pk=None):
+        """
+        Create or update an RSVP for an event.
+        Body: { "status": "interested" | "going" }
+        """
+        event = self.get_object()
+        rsvp_status = request.data.get('status')
+
+        if not rsvp_status or rsvp_status not in ['interested', 'going']:
+            return Response(
+                {'error': 'status is required and must be either "interested" or "going"'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create or update RSVP
+        rsvp, created = EventRSVP.objects.update_or_create(
+            event=event,
+            user=request.user,
+            defaults={'status': rsvp_status}
+        )
+
+        serializer = EventRSVPSerializer(rsvp)
+        message = 'RSVP created successfully' if created else 'RSVP updated successfully'
+
+        return Response(
+            {
+                'message': message,
+                'data': serializer.data
+            },
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
+    def cancel_rsvp(self, request, pk=None):
+        """Cancel/delete an RSVP for an event"""
+        event = self.get_object()
+
+        try:
+            rsvp = EventRSVP.objects.get(event=event, user=request.user)
+            rsvp.delete()
+            return Response(
+                {'message': 'RSVP cancelled successfully'},
+                status=status.HTTP_200_OK
+            )
+        except EventRSVP.DoesNotExist:
+            return Response(
+                {'error': 'No RSVP found for this event'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def my_rsvps(self, request):
+        """Get all RSVPs for the authenticated user"""
+        rsvps = EventRSVP.objects.filter(user=request.user).select_related('event').order_by('-created_at')
+        serializer = EventRSVPSerializer(rsvps, many=True)
+        return Response(serializer.data)

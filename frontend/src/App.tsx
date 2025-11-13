@@ -10,6 +10,7 @@ import EventForm from './components/EventForm';
 import BusinessProfile from './components/BusinessProfile';
 import EventDetailPage from './components/EventDetailPage';
 import BrandsView from './components/BrandsView';
+import MyRSVPs from './components/MyRSVPs';
 import { trackPageView, analytics } from './lib/analytics';
 import logo from './noun-cafe-4738717-007435.png';
 
@@ -137,6 +138,20 @@ function AppContent() {
                 />
                 <div className="flex-1 overflow-auto">
                   <EventDetailPage />
+                </div>
+              </>
+            }
+          />
+          <Route
+            path="/my-rsvps"
+            element={
+              <>
+                <Sidebar
+                  currentView={currentView}
+                  onViewChange={handleViewChange}
+                />
+                <div className="flex-1 overflow-auto">
+                  <MyRSVPs />
                 </div>
               </>
             }

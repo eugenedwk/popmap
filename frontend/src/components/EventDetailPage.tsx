@@ -1,19 +1,25 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { eventsApi } from '../services/api'
+import { useAuth } from '../contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
-import { Calendar, Clock, MapPin, Loader2, ArrowLeft } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Calendar, Clock, MapPin, Loader2, ArrowLeft, Heart, CheckCircle2, Users } from 'lucide-react'
 import { ShareButtons } from './ShareButtons'
 import { EventMetaTags } from './EventMetaTags'
 
 function EventDetailPage() {
   const { eventId: eventIdParam } = useParams<{ eventId: string }>()
   const navigate = useNavigate()
+  const { isAuthenticated, user } = useAuth()
+  const queryClient = useQueryClient()
   const eventId = eventIdParam ? parseInt(eventIdParam, 10) : null
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
 
   const { data: event, isLoading, error } = useQuery({
     queryKey: ['event', eventId],
@@ -24,6 +30,41 @@ function EventDetailPage() {
     },
     enabled: !!eventId,
   })
+
+  // RSVP mutation
+  const rsvpMutation = useMutation({
+    mutationFn: ({ status }: { status: 'interested' | 'going' }) => {
+      if (!eventId) throw new Error('Event ID is required')
+      return eventsApi.rsvp(eventId, status)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] })
+    },
+  })
+
+  // Cancel RSVP mutation
+  const cancelRsvpMutation = useMutation({
+    mutationFn: () => {
+      if (!eventId) throw new Error('Event ID is required')
+      return eventsApi.cancelRsvp(eventId)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] })
+    },
+  })
+
+  const handleRsvp = (status: 'interested' | 'going') => {
+    if (!isAuthenticated) {
+      setShowLoginPrompt(true)
+      return
+    }
+    rsvpMutation.mutate({ status })
+  }
+
+  const handleCancelRsvp = () => {
+    if (!isAuthenticated) return
+    cancelRsvpMutation.mutate()
+  }
 
   function formatDate(dateString: string): string {
     const date = new Date(dateString)
@@ -189,6 +230,89 @@ function EventDetailPage() {
                         <p className="text-sm text-muted-foreground">{event.address}</p>
                       </div>
                     </div>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  {/* RSVP Section */}
+                  <div className="space-y-4">
+                    {showLoginPrompt && (
+                      <Alert>
+                        <AlertDescription>
+                          Please{' '}
+                          <button
+                            onClick={() => navigate('/login')}
+                            className="underline font-medium hover:text-primary"
+                          >
+                            sign in
+                          </button>{' '}
+                          to RSVP to this event.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div>
+                      <p className="font-medium mb-3">Interested in this event?</p>
+                      <div className="flex flex-wrap gap-2">
+                        {event.user_rsvp_status ? (
+                          <>
+                            <Button
+                              variant={event.user_rsvp_status === 'interested' ? 'default' : 'outline'}
+                              onClick={() => event.user_rsvp_status === 'interested' ? handleCancelRsvp() : handleRsvp('interested')}
+                              disabled={rsvpMutation.isPending || cancelRsvpMutation.isPending}
+                            >
+                              <Heart className="h-4 w-4 mr-2" fill={event.user_rsvp_status === 'interested' ? 'currentColor' : 'none'} />
+                              {event.user_rsvp_status === 'interested' ? 'Interested' : 'Mark Interested'}
+                            </Button>
+                            <Button
+                              variant={event.user_rsvp_status === 'going' ? 'default' : 'outline'}
+                              onClick={() => event.user_rsvp_status === 'going' ? handleCancelRsvp() : handleRsvp('going')}
+                              disabled={rsvpMutation.isPending || cancelRsvpMutation.isPending}
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-2" fill={event.user_rsvp_status === 'going' ? 'currentColor' : 'none'} />
+                              {event.user_rsvp_status === 'going' ? 'Going' : 'Mark Going'}
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              variant="outline"
+                              onClick={() => handleRsvp('interested')}
+                              disabled={rsvpMutation.isPending}
+                            >
+                              <Heart className="h-4 w-4 mr-2" />
+                              Interested
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => handleRsvp('going')}
+                              disabled={rsvpMutation.isPending}
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Going
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* RSVP Counts */}
+                    {event.rsvp_counts && (event.rsvp_counts.interested > 0 || event.rsvp_counts.going > 0) && (
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        {event.rsvp_counts.going > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            <span>{event.rsvp_counts.going} going</span>
+                          </div>
+                        )}
+                        {event.rsvp_counts.interested > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Heart className="h-4 w-4" />
+                            <span>{event.rsvp_counts.interested} interested</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </div>

@@ -47,6 +47,24 @@ export interface Event {
   businesses: BusinessMinimal[]
   business_names: string
   categories: string[]
+  user_rsvp_status?: 'interested' | 'going' | null
+  rsvp_counts?: {
+    interested: number
+    going: number
+  }
+}
+
+// RSVP types
+export interface EventRSVP {
+  id: number
+  event: number
+  event_title: string
+  user: number
+  user_email: string
+  user_name: string
+  status: 'interested' | 'going'
+  created_at: string
+  updated_at: string
 }
 
 // Form data types

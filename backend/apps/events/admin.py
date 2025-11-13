@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Business, Event, Category
+from .models import Business, Event, Category, EventRSVP
 
 
 @admin.register(Category)
@@ -92,3 +92,22 @@ class EventAdmin(admin.ModelAdmin):
         if not change:  # Only set created_by during the first save
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(EventRSVP)
+class EventRSVPAdmin(admin.ModelAdmin):
+    list_display = ['user', 'event', 'status', 'created_at', 'updated_at']
+    list_filter = ['status', 'created_at', 'event']
+    search_fields = ['user__username', 'user__email', 'event__title']
+    readonly_fields = ['created_at', 'updated_at']
+    raw_id_fields = ['user', 'event']
+
+    fieldsets = (
+        ('RSVP Information', {
+            'fields': ('user', 'event', 'status')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )

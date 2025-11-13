@@ -156,3 +156,47 @@ class Event(models.Model):
         """Check if event is currently happening or upcoming"""
         from django.utils import timezone
         return self.end_datetime >= timezone.now() and self.status == 'approved'
+
+
+class EventRSVP(models.Model):
+    """
+    Represents a user's RSVP to an event.
+    Users can mark themselves as 'interested' or 'going'.
+    """
+    RSVP_STATUS_CHOICES = [
+        ('interested', 'Interested'),
+        ('going', 'Going'),
+    ]
+
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name='rsvps',
+        help_text="The event the user is RSVPing to"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='event_rsvps',
+        help_text="The user making the RSVP"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=RSVP_STATUS_CHOICES,
+        help_text="The type of RSVP (interested or going)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['event', 'user']
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['event', 'status']),
+            models.Index(fields=['user', 'created_at']),
+        ]
+        verbose_name = "Event RSVP"
+        verbose_name_plural = "Event RSVPs"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.event.title} ({self.get_status_display()})"
