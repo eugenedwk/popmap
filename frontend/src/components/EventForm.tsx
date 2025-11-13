@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -13,7 +13,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, CheckCircle2, XCircle, MapPin } from 'lucide-react'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Loader2, CheckCircle2, XCircle, MapPin, Search, X } from 'lucide-react'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
@@ -40,6 +41,7 @@ function EventFormContent() {
   const [selectedBusinesses, setSelectedBusinesses] = useState([])
   const [submitStatus, setSubmitStatus] = useState(null) // 'success' | 'error' | null
   const [selectedPlace, setSelectedPlace] = useState(null)
+  const [businessSearch, setBusinessSearch] = useState('')
 
   const { data: businesses, isLoading: businessesLoading } = useQuery({
     queryKey: ['businesses'],
@@ -57,6 +59,7 @@ function EventFormContent() {
       form.reset()
       setSelectedBusinesses([])
       setSelectedPlace(null)
+      setBusinessSearch('')
     },
     onError: () => {
       setSubmitStatus('error')
@@ -109,6 +112,25 @@ function EventFormContent() {
     setSelectedBusinesses(newSelected)
     form.setValue('business_ids', newSelected)
   }
+
+  // Filter businesses based on search query
+  const filteredBusinesses = useMemo(() => {
+    if (!businesses) return []
+    if (!businessSearch) return businesses
+
+    const query = businessSearch.toLowerCase()
+    return businesses.filter(business =>
+      business.name.toLowerCase().includes(query) ||
+      business.description?.toLowerCase().includes(query) ||
+      business.categories?.some(cat => cat.name.toLowerCase().includes(query))
+    )
+  }, [businesses, businessSearch])
+
+  // Get selected business objects for display
+  const selectedBusinessObjects = useMemo(() => {
+    if (!businesses) return []
+    return businesses.filter(b => selectedBusinesses.includes(b.id))
+  }, [businesses, selectedBusinesses])
 
   if (businessesLoading) {
     return (
@@ -193,19 +215,87 @@ function EventFormContent() {
                 render={() => (
                   <FormItem>
                     <FormLabel>Participating Businesses *</FormLabel>
-                    <FormDescription>Select all businesses participating in this event</FormDescription>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {businesses?.map((business) => (
-                        <Badge
-                          key={business.id}
-                          variant={selectedBusinesses.includes(business.id) ? 'default' : 'outline'}
-                          className="cursor-pointer hover:opacity-80"
-                          onClick={() => toggleBusiness(business.id)}
-                        >
-                          {business.name}
-                        </Badge>
-                      ))}
+                    <FormDescription>Search and select all businesses participating in this event</FormDescription>
+
+                    {/* Selected businesses display */}
+                    {selectedBusinessObjects.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2 p-3 border rounded-md bg-muted/30">
+                        {selectedBusinessObjects.map((business) => (
+                          <Badge
+                            key={business.id}
+                            variant="default"
+                            className="cursor-pointer hover:opacity-80"
+                          >
+                            {business.name}
+                            <X
+                              className="ml-1 h-3 w-3"
+                              onClick={() => toggleBusiness(business.id)}
+                            />
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Search input */}
+                    <div className="relative mt-2">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search businesses by name or category..."
+                        value={businessSearch}
+                        onChange={(e) => setBusinessSearch(e.target.value)}
+                        className="pl-9"
+                      />
                     </div>
+
+                    {/* Filtered businesses list */}
+                    <ScrollArea className="h-[200px] mt-2 border rounded-md">
+                      <div className="p-2">
+                        {filteredBusinesses.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            {businessSearch ? 'No businesses found matching your search' : 'No businesses available'}
+                          </p>
+                        ) : (
+                          <div className="space-y-1">
+                            {filteredBusinesses.map((business) => {
+                              const isSelected = selectedBusinesses.includes(business.id)
+                              return (
+                                <div
+                                  key={business.id}
+                                  onClick={() => toggleBusiness(business.id)}
+                                  className={`
+                                    flex items-start gap-3 p-2 rounded-md cursor-pointer transition-colors
+                                    ${isSelected ? 'bg-primary/10 border border-primary' : 'hover:bg-muted'}
+                                  `}
+                                >
+                                  <div className="flex-shrink-0 pt-0.5">
+                                    <div className={`
+                                      w-4 h-4 rounded border-2 flex items-center justify-center
+                                      ${isSelected ? 'bg-primary border-primary' : 'border-muted-foreground'}
+                                    `}>
+                                      {isSelected && (
+                                        <CheckCircle2 className="h-3 w-3 text-primary-foreground" />
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium">{business.name}</p>
+                                    {business.categories && business.categories.length > 0 && (
+                                      <div className="flex gap-1 mt-1 flex-wrap">
+                                        {business.categories.map((category) => (
+                                          <Badge key={category.id} variant="secondary" className="text-xs">
+                                            {category.name}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
                     <FormMessage />
                   </FormItem>
                 )}
