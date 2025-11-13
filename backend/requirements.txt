@@ -25,3 +25,6 @@ sqlparse==0.5.3
 typing_extensions==4.15.0
 urllib3==2.5.0
 whitenoise==6.11.0
+# AWS Cognito authentication dependencies
+PyJWT==2.10.1
+cryptography==44.0.0

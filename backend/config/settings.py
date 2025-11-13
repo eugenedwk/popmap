@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'django_filters',
     'storages',  # django-storages for S3
     'apps.events',
+    'apps.authentication',
 ]
 
 MIDDLEWARE = [
@@ -149,12 +150,25 @@ CSRF_TRUSTED_ORIGINS = config(
     cast=Csv()
 )
 
+# AWS Cognito Configuration
+AWS_COGNITO_USER_POOL_ID = config('AWS_COGNITO_USER_POOL_ID', default='')
+AWS_COGNITO_APP_CLIENT_ID = config('AWS_COGNITO_APP_CLIENT_ID', default='')
+AWS_COGNITO_REGION = config('AWS_COGNITO_REGION', default='us-east-1')
+AWS_COGNITO_DOMAIN = config('AWS_COGNITO_DOMAIN', default='')
+
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'apps.authentication.backends.CognitoAuthentication',
+        'rest_framework.authentication.SessionAuthentication',  # Keep for Django admin
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
 }
 
