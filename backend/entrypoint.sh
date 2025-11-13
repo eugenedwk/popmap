@@ -3,40 +3,26 @@ set -e
 
 echo "Starting Django application..."
 
-# Wait for database to be ready (optional but recommended)
+# Wait for database to be ready using Django's connection check
 echo "Waiting for database..."
-python << END
-import sys
-import time
-import psycopg2
-from django.conf import settings
+max_retries=30
+retry_count=0
 
-# Get database settings
-db_settings = settings.DATABASES['default']
+while [ $retry_count -lt $max_retries ]; do
+    if python manage.py check --database default > /dev/null 2>&1; then
+        echo "Database is ready!"
+        break
+    else
+        retry_count=$((retry_count + 1))
+        echo "Database not ready yet. Retry $retry_count/$max_retries..."
+        sleep 2
+    fi
+done
 
-max_retries = 30
-retry_count = 0
-
-while retry_count < max_retries:
-    try:
-        conn = psycopg2.connect(
-            dbname=db_settings['NAME'],
-            user=db_settings['USER'],
-            password=db_settings['PASSWORD'],
-            host=db_settings['HOST'],
-            port=db_settings['PORT']
-        )
-        conn.close()
-        print("Database is ready!")
-        sys.exit(0)
-    except psycopg2.OperationalError:
-        retry_count += 1
-        print(f"Database not ready yet. Retry {retry_count}/{max_retries}...")
-        time.sleep(2)
-
-print("Could not connect to database after maximum retries.")
-sys.exit(1)
-END
+if [ $retry_count -eq $max_retries ]; then
+    echo "Could not connect to database after maximum retries."
+    exit 1
+fi
 
 # Run database migrations
 echo "Running database migrations..."
