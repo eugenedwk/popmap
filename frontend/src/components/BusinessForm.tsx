@@ -15,11 +15,12 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
 
 const businessSchema = z.object({
   name: z.string().min(1, 'Business name is required').max(255),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
+  description: z.string().optional(),
   contact_email: z.string().email('Invalid email address'),
   contact_phone: z.string().regex(/^\+?1?\d{9,15}$/, 'Phone number must be 9-15 digits').optional().or(z.literal('')),
   website: z.string().url('Invalid URL').optional().or(z.literal('')),
   instagram_url: z.string().url('Invalid URL').optional().or(z.literal('')),
+  tiktok_url: z.string().url('Invalid URL').optional().or(z.literal('')),
   logo: z.any().optional(),
   category_ids: z.array(z.number()).min(1, 'Select at least one category'),
 })
@@ -59,6 +60,7 @@ function BusinessForm() {
       contact_phone: '',
       website: '',
       instagram_url: '',
+      tiktok_url: '',
       category_ids: [],
     },
   })
@@ -144,15 +146,15 @@ function BusinessForm() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description *</FormLabel>
+                    <FormLabel>Description</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Tell us about your business..."
+                        placeholder="Tell us about your business... (optional)"
                         className="min-h-[100px]"
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>Minimum 10 characters</FormDescription>
+                    <FormDescription>Optional - Share details about your business</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -233,6 +235,20 @@ function BusinessForm() {
                     <FormLabel>Instagram URL</FormLabel>
                     <FormControl>
                       <Input placeholder="https://instagram.com/yourbusiness" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="tiktok_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>TikTok URL</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://tiktok.com/@yourbusiness" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
