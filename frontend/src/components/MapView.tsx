@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps'
 import { useMapEvents } from '../hooks/useEvents'
+import { useUserGeolocation } from '../hooks/useUserGeolocation'
 import { eventsApi } from '../services/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -20,7 +21,7 @@ import type { Event } from '../types'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
-// Default center (Washington DC)
+// Default center (Washington DC) - used as fallback if geolocation fails
 const DEFAULT_CENTER = { lat: 38.9072, lng: -77.0369 }
 
 interface MapViewProps {
@@ -30,6 +31,7 @@ interface MapViewProps {
 function MapView({ onBusinessClick }: MapViewProps) {
   const navigate = useNavigate()
   const { data: events, isLoading, error } = useMapEvents()
+  const { coordinates } = useUserGeolocation(DEFAULT_CENTER)
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null)
   const [infoWindowEvent, setInfoWindowEvent] = useState<Event | null>(null)
 
@@ -118,7 +120,7 @@ function MapView({ onBusinessClick }: MapViewProps) {
 
       <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
         <Map
-          defaultCenter={DEFAULT_CENTER}
+          defaultCenter={coordinates || DEFAULT_CENTER}
           defaultZoom={11}
           mapId="popmap-events"
           className="h-full"

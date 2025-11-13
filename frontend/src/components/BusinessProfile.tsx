@@ -229,11 +229,6 @@ function BusinessProfile() {
                 <div className="flex-1">
                   <div className="flex items-start gap-3 mb-2">
                     <h1 className="text-3xl font-bold">{business.name}</h1>
-                    {business.is_verified && (
-                      <Badge variant="default" className="mt-1">
-                        Verified
-                      </Badge>
-                    )}
                     {business.available_for_hire && (
                       <Badge
                         variant="default"

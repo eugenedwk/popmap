@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Sidebar from './components/Sidebar';
 import ListView from './components/ListView';
 import CardView from './components/CardView';
@@ -173,7 +174,11 @@ function AppContent() {
 }
 
 function App() {
-  return <AppContent />;
+  return (
+    <HelmetProvider>
+      <AppContent />
+    </HelmetProvider>
+  );
 }
 
 export default App;

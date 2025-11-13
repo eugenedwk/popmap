@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps'
 import { useMapEvents } from '../hooks/useEvents'
+import { useUserGeolocation } from '../hooks/useUserGeolocation'
 import EventCard from './EventCard'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
-// Default center (San Francisco)
+// Default center (San Francisco) - used as fallback if geolocation fails
 const DEFAULT_CENTER = { lat: 37.7749, lng: -122.4194 }
 
 function EventMap() {
   const { data: events, isLoading, error } = useMapEvents()
+  const { coordinates } = useUserGeolocation(DEFAULT_CENTER)
   const [selectedEvent, setSelectedEvent] = useState(null)
 
   if (!GOOGLE_MAPS_API_KEY) {
@@ -49,7 +51,7 @@ function EventMap() {
 
       <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
         <Map
-          defaultCenter={DEFAULT_CENTER}
+          defaultCenter={coordinates || DEFAULT_CENTER}
           defaultZoom={12}
           mapId="popmap-events"
           className="h-full"

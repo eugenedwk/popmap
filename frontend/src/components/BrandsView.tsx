@@ -238,14 +238,6 @@ function BrandsView({ onBusinessClick }: BrandsViewProps) {
                             <CardTitle className="text-xl line-clamp-2">
                               {business.name}
                             </CardTitle>
-                            {business.is_verified && (
-                              <Badge
-                                variant="default"
-                                className="mt-1 flex-shrink-0"
-                              >
-                                Verified
-                              </Badge>
-                            )}
                           </div>
                           {business.categories &&
                             business.categories.length > 0 && (

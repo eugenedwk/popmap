@@ -7,6 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { Calendar, Clock, MapPin, Loader2, ArrowLeft } from 'lucide-react'
+import { ShareButtons } from './ShareButtons'
+import { EventMetaTags } from './EventMetaTags'
 
 function EventDetailPage() {
   const { eventId: eventIdParam } = useParams<{ eventId: string }>()
@@ -74,8 +76,22 @@ function EventDetailPage() {
     navigate(`/p/${businessId}`)
   }
 
+  // Generate the full URL for sharing
+  const eventUrl = `${window.location.origin}/e/${event.id}`
+
   return (
     <div className="h-full bg-background">
+      {/* Meta tags for SEO and social sharing */}
+      <EventMetaTags
+        title={event.title}
+        description={event.description || `Join us for ${event.title}`}
+        image={event.image}
+        url={eventUrl}
+        startDate={event.start_datetime}
+        endDate={event.end_datetime}
+        address={event.address}
+      />
+
       <ScrollArea className="h-full">
         <div className="max-w-6xl mx-auto p-6">
           {/* Back Button */}
@@ -101,7 +117,14 @@ function EventDetailPage() {
               {/* Right Column - Event Details */}
               <div className="flex flex-col">
                 <CardHeader>
-                  <CardTitle className="text-3xl">{event.title}</CardTitle>
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <CardTitle className="text-3xl flex-1">{event.title}</CardTitle>
+                    <ShareButtons
+                      url={eventUrl}
+                      title={event.title}
+                      description={event.description}
+                    />
+                  </div>
                   {event.status && event.status !== 'approved' && (
                     <Badge
                       variant={
