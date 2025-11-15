@@ -17,15 +17,32 @@ class BusinessSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    can_use_custom_subdomain = serializers.BooleanField(read_only=True)
+    subdomain_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Business
         fields = [
             'id', 'name', 'description', 'contact_email', 'contact_phone',
             'website', 'instagram_url', 'tiktok_url', 'available_for_hire',
-            'logo', 'categories', 'category_ids', 'is_verified', 'created_at'
+            'logo', 'categories', 'category_ids', 'custom_subdomain',
+            'can_use_custom_subdomain', 'subdomain_url',
+            'is_verified', 'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'is_verified']
+
+    def get_subdomain_url(self, obj):
+        """Return the subdomain URL if available"""
+        return obj.get_subdomain_url()
+
+    def validate_custom_subdomain(self, value):
+        """Validate that the business can use custom subdomains"""
+        if value and not self.instance.can_use_custom_subdomain():
+            raise serializers.ValidationError(
+                "Your subscription plan does not include custom subdomains. "
+                "Please upgrade to use this feature."
+            )
+        return value
 
 
 class BusinessMinimalSerializer(serializers.ModelSerializer):
@@ -68,7 +85,8 @@ class EventSerializer(serializers.ModelSerializer):
             'title', 'description', 'address',
             'latitude', 'longitude',
             'start_datetime', 'end_datetime',
-            'image', 'status', 'created_at', 'updated_at',
+            'image', 'cta_button_text', 'cta_button_url',
+            'status', 'created_at', 'updated_at',
             'user_rsvp_status', 'rsvp_counts'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

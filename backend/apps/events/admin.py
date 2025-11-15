@@ -12,9 +12,9 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Business)
 class BusinessAdmin(admin.ModelAdmin):
-    list_display = ['name', 'contact_email', 'is_verified', 'available_for_hire', 'get_categories', 'created_at']
+    list_display = ['name', 'custom_subdomain', 'contact_email', 'is_verified', 'available_for_hire', 'get_categories', 'created_at']
     list_filter = ['is_verified', 'available_for_hire', 'categories', 'created_at']
-    search_fields = ['name', 'contact_email', 'description']
+    search_fields = ['name', 'contact_email', 'description', 'custom_subdomain']
     readonly_fields = ['created_at', 'updated_at']
     filter_horizontal = ['categories']
 
@@ -24,6 +24,11 @@ class BusinessAdmin(admin.ModelAdmin):
         }),
         ('Contact & Social', {
             'fields': ('contact_email', 'contact_phone', 'website', 'instagram_url', 'tiktok_url')
+        }),
+        ('Custom Subdomain', {
+            'fields': ('custom_subdomain',),
+            'description': 'Custom subdomain for this business (requires active subscription with subdomain feature). Example: "mybusiness" creates mybusiness.popmap.co',
+            'classes': ('collapse',)
         }),
         ('Account & Verification', {
             'fields': ('owner', 'is_verified', 'available_for_hire')
@@ -52,6 +57,11 @@ class EventAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Event Information', {
             'fields': ('host_business', 'businesses', 'title', 'description', 'image')
+        }),
+        ('Call to Action', {
+            'fields': ('cta_button_text', 'cta_button_url'),
+            'description': 'Optional: Add a custom call-to-action button (e.g., "Buy Tickets", "Register Now")',
+            'classes': ('collapse',)
         }),
         ('Location', {
             'fields': ('location_name', 'address', 'latitude', 'longitude'),

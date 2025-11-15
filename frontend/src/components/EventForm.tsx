@@ -21,6 +21,8 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const eventSchema = z.object({
   title: z.string().min(1, 'Event title is required').max(255),
   description: z.string().optional(),
+  cta_button_text: z.string().max(50, 'Button text must be 50 characters or less').optional(),
+  cta_button_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   address: z.string().min(1, 'Address is required').max(500),
   latitude: z.string().regex(/^-?\d+\.?\d*$/, 'Invalid latitude'),
   longitude: z.string().regex(/^-?\d+\.?\d*$/, 'Invalid longitude'),
@@ -35,6 +37,14 @@ const eventSchema = z.object({
 }, {
   message: 'End date must be after start date',
   path: ['end_datetime'],
+}).refine((data) => {
+  // If button text is provided, URL must be provided and vice versa
+  const hasText = data.cta_button_text && data.cta_button_text.trim() !== ''
+  const hasUrl = data.cta_button_url && data.cta_button_url.trim() !== ''
+  return (hasText && hasUrl) || (!hasText && !hasUrl)
+}, {
+  message: 'Both button text and URL are required if you want to add a call-to-action button',
+  path: ['cta_button_url'],
 })
 
 function EventFormContent() {
@@ -72,6 +82,8 @@ function EventFormContent() {
     defaultValues: {
       title: '',
       description: '',
+      cta_button_text: '',
+      cta_button_url: '',
       address: '',
       latitude: '',
       longitude: '',
@@ -208,6 +220,38 @@ function EventFormContent() {
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="cta_button_text"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Call-to-Action Button Text</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Buy Tickets" {...field} />
+                      </FormControl>
+                      <FormDescription>Optional (max 50 characters)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cta_button_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Call-to-Action Button URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://tickets.example.com" {...field} />
+                      </FormControl>
+                      <FormDescription>Optional</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}

@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Calendar, Clock, MapPin, Loader2, ArrowLeft, Heart, CheckCircle2, Users } from 'lucide-react'
+import { Calendar, Clock, MapPin, Loader2, ArrowLeft, Heart, CheckCircle2, Users, ExternalLink } from 'lucide-react'
 import { ShareButtons } from './ShareButtons'
 import { EventMetaTags } from './EventMetaTags'
 
@@ -193,6 +193,26 @@ function EventDetailPage() {
                   {event.description && (
                     <div className="mb-6">
                       <p className="text-muted-foreground whitespace-pre-wrap">{event.description}</p>
+                    </div>
+                  )}
+
+                  {/* Call to Action Button */}
+                  {event.cta_button_text && event.cta_button_url && (
+                    <div className="mb-6">
+                      <Button
+                        asChild
+                        size="lg"
+                        className="w-full sm:w-auto"
+                      >
+                        <a
+                          href={event.cta_button_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {event.cta_button_text}
+                          <ExternalLink className="h-4 w-4 ml-2" />
+                        </a>
+                      </Button>
                     </div>
                   )}
 

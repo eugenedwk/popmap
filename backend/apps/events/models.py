@@ -60,6 +60,15 @@ class Business(models.Model):
         related_name='businesses'
     )
 
+    # Custom subdomain (requires premium subscription)
+    custom_subdomain = models.SlugField(
+        max_length=50,
+        blank=True,
+        null=True,
+        unique=True,
+        help_text="Custom subdomain for this business (e.g., 'mybusiness' for mybusiness.popmap.co)"
+    )
+
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -70,6 +79,33 @@ class Business(models.Model):
 
     def __str__(self):
         return self.name
+
+    def can_use_custom_subdomain(self):
+        """
+        Check if business owner has an active subscription that allows custom subdomains.
+        Requires the billing app to be installed.
+        """
+        if not self.owner:
+            return False
+
+        try:
+            from apps.billing.models import Subscription
+            # Check for active subscription with custom subdomain feature
+            subscription = Subscription.objects.filter(
+                user=self.owner,
+                status__in=['active', 'trialing'],
+                plan__custom_subdomain_enabled=True
+            ).first()
+            return subscription is not None
+        except ImportError:
+            # If billing app is not installed, return False
+            return False
+
+    def get_subdomain_url(self):
+        """Get the full subdomain URL for this business"""
+        if self.custom_subdomain:
+            return f"https://{self.custom_subdomain}.popmap.co"
+        return None
 
 
 class Event(models.Model):
@@ -117,6 +153,17 @@ class Event(models.Model):
 
     # Media
     image = models.ImageField(upload_to='event_images/', blank=True, null=True)
+
+    # Call to Action
+    cta_button_text = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Text for the call-to-action button (e.g., 'Buy Tickets', 'Register Now')"
+    )
+    cta_button_url = models.URLField(
+        blank=True,
+        help_text="URL for the call-to-action button"
+    )
 
     # Status and moderation
     status = models.CharField(

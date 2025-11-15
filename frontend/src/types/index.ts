@@ -18,6 +18,9 @@ export interface Business {
   available_for_hire: boolean
   logo?: string
   categories: Category[]
+  custom_subdomain?: string | null
+  can_use_custom_subdomain: boolean
+  subdomain_url?: string | null
   is_verified: boolean
   created_at: string
 }
@@ -41,6 +44,8 @@ export interface Event {
   start_datetime: string
   end_datetime: string
   image?: string
+  cta_button_text?: string
+  cta_button_url?: string
   status: 'pending' | 'approved' | 'rejected' | 'cancelled'
   created_at: string
   updated_at: string
@@ -84,6 +89,8 @@ export interface BusinessFormData {
 export interface EventFormData {
   title: string
   description: string
+  cta_button_text?: string
+  cta_button_url?: string
   address: string
   latitude: string
   longitude: string
@@ -104,4 +111,52 @@ export interface PlaceResult {
   address: string
   latitude: number
   longitude: number
+}
+
+// Billing & Subscription types
+export interface SubscriptionPlan {
+  id: number
+  name: string
+  slug: string
+  plan_type: 'free' | 'starter' | 'professional' | 'enterprise'
+  description: string
+  price: string
+  stripe_price_id: string
+  stripe_product_id: string
+  max_events_per_month: number
+  custom_subdomain_enabled: boolean
+  featured_listing: boolean
+  analytics_enabled: boolean
+  priority_support: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Subscription {
+  id: number
+  user: number
+  plan: SubscriptionPlan
+  stripe_subscription_id: string
+  status: 'active' | 'past_due' | 'canceled' | 'unpaid' | 'trialing' | 'incomplete' | 'incomplete_expired'
+  current_period_start: string
+  current_period_end: string
+  cancel_at_period_end: boolean
+  canceled_at?: string | null
+  trial_start?: string | null
+  trial_end?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateCheckoutSessionRequest {
+  plan_id: number
+  success_url: string
+  cancel_url: string
+}
+
+export interface CheckoutSessionResponse {
+  session_id: string
+  session_url: string
+  publishable_key: string
 }

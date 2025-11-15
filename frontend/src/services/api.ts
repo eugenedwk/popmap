@@ -1,6 +1,17 @@
 import axios, { type AxiosResponse } from 'axios'
 import { fetchAuthSession } from 'aws-amplify/auth'
-import type { Category, Business, Event, BusinessFormData, EventFormData, ApiResponse } from '../types'
+import type {
+  Category,
+  Business,
+  Event,
+  BusinessFormData,
+  EventFormData,
+  ApiResponse,
+  SubscriptionPlan,
+  Subscription,
+  CreateCheckoutSessionRequest,
+  CheckoutSessionResponse
+} from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
@@ -71,6 +82,8 @@ export const businessesApi = {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
   },
+  update: (id: number, data: Partial<Business>): Promise<AxiosResponse<Business>> =>
+    apiClient.patch(`/businesses/${id}/`, data),
 }
 
 export const eventsApi = {
@@ -104,6 +117,22 @@ export const eventsApi = {
     apiClient.delete(`/events/${eventId}/cancel_rsvp/`),
   getMyRsvps: (): Promise<AxiosResponse<any[]>> =>
     apiClient.get('/events/my_rsvps/'),
+}
+
+export const billingApi = {
+  getPlans: (): Promise<AxiosResponse<SubscriptionPlan[]>> =>
+    apiClient.get('/billing/plans/'),
+
+  getCurrentSubscription: (): Promise<AxiosResponse<{ subscription: Subscription | null; message?: string }>> =>
+    apiClient.get('/billing/subscription/current/'),
+
+  createCheckoutSession: (data: CreateCheckoutSessionRequest): Promise<AxiosResponse<CheckoutSessionResponse>> =>
+    apiClient.post('/billing/subscription/create_checkout_session/', data),
+
+  cancelSubscription: (cancelAtPeriodEnd: boolean = true): Promise<AxiosResponse<{ message: string; cancel_at_period_end: boolean }>> =>
+    apiClient.post('/billing/subscription/cancel/', {
+      cancel_at_period_end: cancelAtPeriodEnd
+    }),
 }
 
 export default apiClient
