@@ -84,10 +84,15 @@ export function Signup() {
 
     try {
       await confirmSignUp(email, verificationCode);
-      // Verification successful, redirect to login
-      navigate('/login', {
-        state: { message: 'Account verified! Please sign in.' }
-      });
+      // Verification successful
+      // Business owners should complete their profile, attendees go to home
+      if (role === 'business_owner') {
+        navigate('/onboarding/business');
+      } else {
+        navigate('/login', {
+          state: { message: 'Account verified! Please sign in.' }
+        });
+      }
     } catch (err: any) {
       console.error('Verification error:', err);
       setError(err.message || 'Invalid verification code. Please try again.');

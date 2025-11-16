@@ -11,6 +11,13 @@ import BusinessProfile from './components/BusinessProfile';
 import EventDetailPage from './components/EventDetailPage';
 import BrandsView from './components/BrandsView';
 import MyRSVPs from './components/MyRSVPs';
+import { Signup } from './components/Signup';
+import { Login } from './components/Login';
+import { AuthCallback } from './components/AuthCallback';
+import { BusinessOnboarding } from './components/BusinessOnboarding';
+import { useAuth } from './contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { User, LogOut } from 'lucide-react';
 import { trackPageView, analytics } from './lib/analytics';
 import logo from './noun-cafe-4738717-007435.png';
 
@@ -26,6 +33,7 @@ function AppContent() {
   const [currentView, setCurrentView] = useState<ViewType>('map');
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isAuthenticated, signOut } = useAuth();
 
   const handleBusinessClick = (businessId: number) => {
     analytics.trackBusinessClick(businessId);
@@ -94,7 +102,7 @@ function AppContent() {
   return (
     <div className="h-screen flex flex-col">
       <header className="bg-primary text-primary-foreground p-4 shadow-lg">
-        <div className="flex items-start gap-3">
+        <div className="flex items-center justify-between gap-4">
           <button
             onClick={() => {
               analytics.trackHomeClick();
@@ -110,10 +118,54 @@ function AppContent() {
               </p>
             </div>
           </button>
+
+          <div className="flex items-center gap-2">
+            {isAuthenticated ? (
+              <>
+                <div className="flex items-center gap-2 mr-2">
+                  <User className="h-4 w-4" />
+                  <span className="text-sm hidden sm:inline">{user?.first_name || user?.email}</span>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => signOut().then(() => navigate('/'))}
+                >
+                  <LogOut className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Sign Out</span>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/login')}
+                  className="text-primary-foreground hover:bg-primary-foreground/20"
+                >
+                  Sign In
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => navigate('/signup')}
+                >
+                  Get Started
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </header>
       <main className="flex-1 flex overflow-hidden">
         <Routes>
+          {/* Auth Routes - Full screen, no sidebar */}
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/callback" element={<AuthCallback />} />
+          <Route path="/onboarding/business" element={<BusinessOnboarding />} />
+
+          {/* Regular Routes - With sidebar */}
           <Route
             path="/p/:businessId"
             element={
