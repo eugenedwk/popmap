@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Calendar, Clock, MapPin, Loader2, X } from 'lucide-react'
+import { Calendar, Clock, MapPin, Loader2, X, ExternalLink } from 'lucide-react'
 import type { Event } from '../types'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
@@ -306,6 +306,27 @@ function MapView({ onBusinessClick }: MapViewProps) {
                   </div>
                 </div>
               </div>
+
+              {/* CTA Button */}
+              {fullEventDetails.cta_button_text && fullEventDetails.cta_button_url && (
+                <>
+                  <Separator className="my-4" />
+                  <Button
+                    className="w-full"
+                    asChild
+                  >
+                    <a
+                      href={fullEventDetails.cta_button_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2"
+                    >
+                      {fullEventDetails.cta_button_text}
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </>
+              )}
 
               {fullEventDetails.businesses && fullEventDetails.businesses.length > 0 && (
                 <>

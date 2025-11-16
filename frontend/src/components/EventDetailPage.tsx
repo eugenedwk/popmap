@@ -271,53 +271,56 @@ function EventDetailPage() {
                       </Alert>
                     )}
 
-                    <div>
-                      <p className="font-medium mb-3">Interested in this event?</p>
-                      <div className="flex flex-wrap gap-2">
-                        {event.user_rsvp_status ? (
-                          <>
-                            <Button
-                              variant={event.user_rsvp_status === 'interested' ? 'default' : 'outline'}
-                              onClick={() => event.user_rsvp_status === 'interested' ? handleCancelRsvp() : handleRsvp('interested')}
-                              disabled={rsvpMutation.isPending || cancelRsvpMutation.isPending}
-                            >
-                              <Heart className="h-4 w-4 mr-2" fill={event.user_rsvp_status === 'interested' ? 'currentColor' : 'none'} />
-                              {event.user_rsvp_status === 'interested' ? 'Interested' : 'Mark Interested'}
-                            </Button>
-                            <Button
-                              variant={event.user_rsvp_status === 'going' ? 'default' : 'outline'}
-                              onClick={() => event.user_rsvp_status === 'going' ? handleCancelRsvp() : handleRsvp('going')}
-                              disabled={rsvpMutation.isPending || cancelRsvpMutation.isPending}
-                            >
-                              <CheckCircle2 className="h-4 w-4 mr-2" fill={event.user_rsvp_status === 'going' ? 'currentColor' : 'none'} />
-                              {event.user_rsvp_status === 'going' ? 'Going' : 'Mark Going'}
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button
-                              variant="outline"
-                              onClick={() => handleRsvp('interested')}
-                              disabled={rsvpMutation.isPending}
-                            >
-                              <Heart className="h-4 w-4 mr-2" />
-                              Interested
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() => handleRsvp('going')}
-                              disabled={rsvpMutation.isPending}
-                            >
-                              <CheckCircle2 className="h-4 w-4 mr-2" />
-                              Going
-                            </Button>
-                          </>
-                        )}
+                    {/* RSVP Section - Hidden until accounts are implemented */}
+                    {false && (
+                      <div>
+                        <p className="font-medium mb-3">Interested in this event?</p>
+                        <div className="flex flex-wrap gap-2">
+                          {event.user_rsvp_status ? (
+                            <>
+                              <Button
+                                variant={event.user_rsvp_status === 'interested' ? 'default' : 'outline'}
+                                onClick={() => event.user_rsvp_status === 'interested' ? handleCancelRsvp() : handleRsvp('interested')}
+                                disabled={rsvpMutation.isPending || cancelRsvpMutation.isPending}
+                              >
+                                <Heart className="h-4 w-4 mr-2" fill={event.user_rsvp_status === 'interested' ? 'currentColor' : 'none'} />
+                                {event.user_rsvp_status === 'interested' ? 'Interested' : 'Mark Interested'}
+                              </Button>
+                              <Button
+                                variant={event.user_rsvp_status === 'going' ? 'default' : 'outline'}
+                                onClick={() => event.user_rsvp_status === 'going' ? handleCancelRsvp() : handleRsvp('going')}
+                                disabled={rsvpMutation.isPending || cancelRsvpMutation.isPending}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2" fill={event.user_rsvp_status === 'going' ? 'currentColor' : 'none'} />
+                                {event.user_rsvp_status === 'going' ? 'Going' : 'Mark Going'}
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                variant="outline"
+                                onClick={() => handleRsvp('interested')}
+                                disabled={rsvpMutation.isPending}
+                              >
+                                <Heart className="h-4 w-4 mr-2" />
+                                Interested
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => handleRsvp('going')}
+                                disabled={rsvpMutation.isPending}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Going
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    {/* RSVP Counts */}
-                    {event.rsvp_counts && (event.rsvp_counts.interested > 0 || event.rsvp_counts.going > 0) && (
+                    {/* RSVP Counts - Hidden until accounts are implemented */}
+                    {false && event.rsvp_counts && (event.rsvp_counts.interested > 0 || event.rsvp_counts.going > 0) && (
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         {event.rsvp_counts.going > 0 && (
                           <div className="flex items-center gap-1">
