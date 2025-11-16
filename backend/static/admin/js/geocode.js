@@ -38,8 +38,8 @@
         buttonContainer.appendChild(geocodeBtn);
         buttonContainer.appendChild(statusMsg);
 
-        // Insert button after longitude field
-        lonField.parentElement.appendChild(buttonContainer);
+        // Insert button after address field
+        addressField.parentElement.appendChild(buttonContainer);
 
         // Geocode button click handler
         geocodeBtn.addEventListener('click', async function() {
