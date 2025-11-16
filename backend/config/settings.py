@@ -183,3 +183,6 @@ if DEBUG:
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
 STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY', default='')
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
+
+# Google Maps API configuration
+GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')

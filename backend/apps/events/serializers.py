@@ -1,5 +1,9 @@
 from rest_framework import serializers
 from .models import Business, Event, Category, EventRSVP
+from .geocoding import get_geocoding_service
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -116,6 +120,67 @@ class EventSerializer(serializers.ModelSerializer):
                     "End datetime must be after start datetime"
                 )
         return data
+
+    def create(self, validated_data):
+        """
+        Create an event with automatic geocoding if lat/long not provided.
+        If latitude/longitude are not provided or are empty, attempt to geocode the address.
+        """
+        latitude = validated_data.get('latitude')
+        longitude = validated_data.get('longitude')
+        address = validated_data.get('address')
+
+        # Check if we need to geocode
+        needs_geocoding = (
+            address and
+            (not latitude or not longitude or str(latitude).strip() == '' or str(longitude).strip() == '')
+        )
+
+        if needs_geocoding:
+            logger.info(f"Attempting to geocode address: {address}")
+            geocoding_service = get_geocoding_service()
+            coordinates = geocoding_service.geocode_address(address)
+
+            if coordinates:
+                validated_data['latitude'] = coordinates[0]
+                validated_data['longitude'] = coordinates[1]
+                logger.info(f"Successfully geocoded to: {coordinates}")
+            else:
+                logger.warning(f"Failed to geocode address: {address}")
+                # If geocoding fails and no coordinates provided, raise error
+                if not latitude or not longitude:
+                    raise serializers.ValidationError({
+                        'address': 'Could not geocode address. Please provide latitude and longitude manually.'
+                    })
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        """
+        Update an event with automatic geocoding if address changed but lat/long not updated.
+        """
+        # Check if address is being updated
+        new_address = validated_data.get('address')
+        address_changed = new_address and new_address != instance.address
+
+        # Check if lat/long are being explicitly updated
+        lat_in_data = 'latitude' in validated_data
+        lng_in_data = 'longitude' in validated_data
+
+        # If address changed but lat/long not explicitly updated, geocode
+        if address_changed and not (lat_in_data and lng_in_data):
+            logger.info(f"Address changed to: {new_address}, attempting geocoding")
+            geocoding_service = get_geocoding_service()
+            coordinates = geocoding_service.geocode_address(new_address)
+
+            if coordinates:
+                validated_data['latitude'] = coordinates[0]
+                validated_data['longitude'] = coordinates[1]
+                logger.info(f"Successfully geocoded to: {coordinates}")
+            else:
+                logger.warning(f"Failed to geocode new address: {new_address}")
+
+        return super().update(instance, validated_data)
 
 
 class EventListSerializer(serializers.ModelSerializer):

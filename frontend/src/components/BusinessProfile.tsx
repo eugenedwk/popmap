@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { formatPhoneNumber } from '@/lib/utils';
 import type { Event } from '../types';
+import { BusinessEventsMap } from './BusinessEventsMap';
 
 function BusinessProfile() {
   const { businessId: businessIdParam } = useParams<{ businessId: string }>();
@@ -314,6 +315,16 @@ function BusinessProfile() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Map of Upcoming Events */}
+          {(presentEvents.length > 0 || futureEvents.length > 0) && (
+            <div className="mb-6">
+              <BusinessEventsMap
+                events={[...presentEvents, ...futureEvents]}
+                businessName={business.name}
+              />
+            </div>
+          )}
 
           {/* Available Events to Join - Hidden until authentication is implemented */}
           {false && availableEvents.length > 0 && (
