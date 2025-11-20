@@ -162,15 +162,15 @@ function AppContent() {
       </header>
       <main className="flex-1 flex overflow-hidden">
         <Routes>
-          {/* Auth Routes - Full screen, no sidebar */}
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/callback" element={<AuthCallback />} />
-          <Route path="/onboarding/business" element={<BusinessOnboarding />} />
+          {/* Auth Routes - Full screen, no sidebar, scrollable */}
+          <Route path="/signup" element={<div className="flex-1 overflow-auto"><Signup /></div>} />
+          <Route path="/login" element={<div className="flex-1 overflow-auto"><Login /></div>} />
+          <Route path="/callback" element={<div className="flex-1 overflow-auto"><AuthCallback /></div>} />
+          <Route path="/onboarding/business" element={<div className="flex-1 overflow-auto"><BusinessOnboarding /></div>} />
 
-          {/* Form Builder Routes - Full screen, no sidebar */}
-          <Route path="/forms/:templateId/submissions" element={<FormSubmissionsList />} />
-          <Route path="/business/:businessId/dashboard" element={<BusinessDashboard />} />
+          {/* Form Builder Routes - Full screen, no sidebar, scrollable */}
+          <Route path="/forms/:templateId/submissions" element={<div className="flex-1 overflow-auto"><FormSubmissionsList /></div>} />
+          <Route path="/business/:businessId/dashboard" element={<div className="flex-1 overflow-auto"><BusinessDashboard /></div>} />
 
           {/* Regular Routes - With sidebar */}
           <Route

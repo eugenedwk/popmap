@@ -83,9 +83,7 @@ export const businessesApi = {
         formData.append(key, value as string)
       }
     })
-    return apiClient.post('/businesses/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    return apiClient.post('/businesses/', formData)
   },
   update: (id: number, data: Partial<Business>): Promise<AxiosResponse<Business>> =>
     apiClient.patch(`/businesses/${id}/`, data),
@@ -108,9 +106,7 @@ export const eventsApi = {
         formData.append(key, value as string)
       }
     })
-    return apiClient.post('/events/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    return apiClient.post('/events/', formData)
   },
   joinEvent: (eventId: number, businessId: number): Promise<AxiosResponse<{ message: string; event_id: number; business_id: number }>> =>
     apiClient.post(`/events/${eventId}/join/`, { business_id: businessId }),
