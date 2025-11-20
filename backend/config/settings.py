@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'apps.events',
     'apps.authentication',
     'apps.billing',
+    'apps.forms',
 ]
 
 MIDDLEWARE = [
@@ -48,7 +49,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -189,3 +190,15 @@ STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
 
 # Google Maps API configuration
 GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')
+
+# Email Configuration (AWS SES)
+EMAIL_BACKEND = config(
+    'EMAIL_BACKEND',
+    default='django.core.mail.backends.console.EmailBackend'  # Dev default - prints to console
+)
+EMAIL_HOST = config('EMAIL_HOST', default='email-smtp.us-east-1.amazonaws.com')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')  # AWS SES SMTP username
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')  # AWS SES SMTP password
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@popmap.co')

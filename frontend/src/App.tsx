@@ -15,6 +15,9 @@ import { Signup } from './components/Signup';
 import { Login } from './components/Login';
 import { AuthCallback } from './components/AuthCallback';
 import { BusinessOnboarding } from './components/BusinessOnboarding';
+import { BusinessDashboard } from './components/BusinessDashboard';
+import { FormTemplateBuilder } from './components/FormTemplateBuilder';
+import { FormSubmissionsList } from './components/FormSubmissionsList';
 import { useAuth } from './contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
@@ -164,6 +167,10 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/callback" element={<AuthCallback />} />
           <Route path="/onboarding/business" element={<BusinessOnboarding />} />
+
+          {/* Form Builder Routes - Full screen, no sidebar */}
+          <Route path="/forms/:templateId/submissions" element={<FormSubmissionsList />} />
+          <Route path="/business/:businessId/dashboard" element={<BusinessDashboard />} />
 
           {/* Regular Routes - With sidebar */}
           <Route

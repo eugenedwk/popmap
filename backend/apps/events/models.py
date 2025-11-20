@@ -165,6 +165,16 @@ class Event(models.Model):
         help_text="URL for the call-to-action button"
     )
 
+    # Form Template (optional)
+    form_template = models.ForeignKey(
+        'forms.FormTemplate',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='events',
+        help_text="Optional form for this event"
+    )
+
     # Status and moderation
     status = models.CharField(
         max_length=20,

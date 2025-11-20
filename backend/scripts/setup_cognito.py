@@ -151,9 +151,7 @@ def create_app_client(client, user_pool_id):
                 'ALLOW_CUSTOM_AUTH'
             ],
             SupportedIdentityProviders=[
-                'COGNITO',
-                'Facebook',
-                'Google'
+                'COGNITO'
             ],
             CallbackURLs=CALLBACK_URLS,
             LogoutURLs=LOGOUT_URLS,

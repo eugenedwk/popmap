@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { APIProvider } from '@vis.gl/react-google-maps'
-import { eventsApi, businessesApi } from '../services/api'
+import { eventsApi, businessesApi, formsApi } from '../services/api'
 import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete'
 import { analytics } from '../lib/analytics'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Loader2, CheckCircle2, XCircle, MapPin, Search, X } from 'lucide-react'
@@ -29,6 +30,7 @@ const eventSchema = z.object({
   start_datetime: z.string().min(1, 'Start date and time is required'),
   end_datetime: z.string().min(1, 'End date and time is required'),
   business_ids: z.array(z.number()).min(1, 'Select at least one business'),
+  form_template: z.number().optional(),
   image: z.any().optional(),
 }).refine((data) => {
   const start = new Date(data.start_datetime)
@@ -61,6 +63,18 @@ function EventFormContent() {
     },
   })
 
+  // Fetch form templates for selected businesses
+  const { data: formTemplates } = useQuery({
+    queryKey: ['form-templates', selectedBusinesses],
+    queryFn: async () => {
+      if (selectedBusinesses.length === 0) return []
+      const response = await formsApi.getTemplates()
+      // Filter templates that belong to selected businesses
+      return response.data.filter(t => selectedBusinesses.includes(t.business))
+    },
+    enabled: selectedBusinesses.length > 0
+  })
+
   const mutation = useMutation({
     mutationFn: (data) => eventsApi.create(data),
     onSuccess: () => {
@@ -90,6 +104,7 @@ function EventFormContent() {
       start_datetime: '',
       end_datetime: '',
       business_ids: [],
+      form_template: undefined,
     },
   })
 
@@ -112,6 +127,7 @@ function EventFormContent() {
       image: data.image?.[0], // Get first file if exists
       latitude: parseFloat(data.latitude),
       longitude: parseFloat(data.longitude),
+      form_template: data.form_template || null, // Convert undefined to null
     }
     mutation.mutate(formData)
   }
@@ -424,6 +440,45 @@ function EventFormContent() {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="form_template"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Attach Form (Optional)</FormLabel>
+                    <Select
+                      value={field.value?.toString()}
+                      onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a form template" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No form</SelectItem>
+                        {formTemplates && formTemplates.length > 0 ? (
+                          formTemplates.map((template) => (
+                            <SelectItem key={template.id} value={template.id.toString()}>
+                              {template.name} - {template.business_name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-templates" disabled>
+                            No forms available for selected businesses
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Select a form to collect information from attendees
+                      {selectedBusinesses.length === 0 && ' (select a business first)'}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

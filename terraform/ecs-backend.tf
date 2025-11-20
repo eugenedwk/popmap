@@ -65,7 +65,7 @@ resource "aws_ecs_cluster" "main" {
 
   setting {
     name  = "containerInsights"
-    value = "enabled"
+    value = "disabled"  # Disabled to stay within CloudWatch free tier (10 metrics/month)
   }
 
   tags = {
@@ -379,6 +379,26 @@ resource "aws_ecs_task_definition" "backend" {
         {
           name  = "AWS_S3_CUSTOM_DOMAIN"
           value = aws_cloudfront_distribution.media.domain_name
+        },
+        {
+          name  = "EMAIL_BACKEND"
+          value = "django.core.mail.backends.smtp.EmailBackend"
+        },
+        {
+          name  = "EMAIL_HOST"
+          value = "email-smtp.us-east-1.amazonaws.com"
+        },
+        {
+          name  = "EMAIL_PORT"
+          value = "587"
+        },
+        {
+          name  = "EMAIL_USE_TLS"
+          value = "True"
+        },
+        {
+          name  = "DEFAULT_FROM_EMAIL"
+          value = "noreply@popmap.co"
         }
       ]
 
@@ -390,6 +410,14 @@ resource "aws_ecs_task_definition" "backend" {
         {
           name      = "DATABASE_URL"
           valueFrom = "${aws_secretsmanager_secret.db_credentials.arn}:DATABASE_URL::"
+        },
+        {
+          name      = "EMAIL_HOST_USER"
+          valueFrom = "${data.aws_secretsmanager_secret.ses_smtp.arn}:EMAIL_HOST_USER::"
+        },
+        {
+          name      = "EMAIL_HOST_PASSWORD"
+          valueFrom = "${data.aws_secretsmanager_secret.ses_smtp.arn}:EMAIL_HOST_PASSWORD::"
         }
       ]
 
@@ -466,6 +494,13 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
   })
 }
 
+# ===== Secrets Manager for SES SMTP Credentials =====
+
+# Reference existing secret created manually
+data "aws_secretsmanager_secret" "ses_smtp" {
+  name = "popmap/prod/ses-smtp"
+}
+
 # Allow ECS task execution role to read secrets
 resource "aws_iam_role_policy" "ecs_secrets_access" {
   name = "${var.project_name}-ecs-secrets-policy"
@@ -481,7 +516,8 @@ resource "aws_iam_role_policy" "ecs_secrets_access" {
         ]
         Resource = [
           aws_secretsmanager_secret.django_secret_key.arn,
-          aws_secretsmanager_secret.db_credentials.arn
+          aws_secretsmanager_secret.db_credentials.arn,
+          data.aws_secretsmanager_secret.ses_smtp.arn
         ]
       }
     ]

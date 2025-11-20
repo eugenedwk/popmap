@@ -160,3 +160,83 @@ export interface CheckoutSessionResponse {
   session_url: string
   publishable_key: string
 }
+
+// Form Builder types
+export interface FormFieldOption {
+  id?: number
+  label: string
+  value: string
+  order: number
+}
+
+export interface FormField {
+  id?: number
+  form_template?: number
+  field_type: 'text' | 'dropdown'
+  label: string
+  placeholder?: string
+  help_text?: string
+  is_required: boolean
+  order: number
+  options?: FormFieldOption[]
+}
+
+export interface FormTemplate {
+  id: number
+  business: number
+  business_name: string
+  name: string
+  title: string
+  description?: string
+  notification_email: string
+  send_confirmation_to_submitter: boolean
+  confirmation_message?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  fields: FormField[]
+  submission_count: number
+  field_count?: number
+}
+
+export interface FormResponse {
+  id: number
+  field: number
+  field_label: string
+  field_type: string
+  value: string
+}
+
+export interface FormSubmission {
+  id: number
+  form_template: number
+  form_name: string
+  form_title: string
+  user?: number
+  user_email?: string
+  submitter_email: string
+  event?: number
+  submitted_at: string
+  responses: FormResponse[]
+  notification_sent: boolean
+  confirmation_sent: boolean
+}
+
+export interface FormSubmissionRequest {
+  submitter_email?: string
+  event_id?: number
+  responses: Array<{
+    field_id: number
+    value: string
+  }>
+}
+
+export interface FormTemplateFormData {
+  business: number
+  name: string
+  title: string
+  description?: string
+  notification_email: string
+  send_confirmation_to_submitter: boolean
+  confirmation_message?: string
+}

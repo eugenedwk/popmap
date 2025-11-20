@@ -116,14 +116,8 @@ resource "aws_security_group" "rds" {
   description = "Security group for RDS PostgreSQL instance"
   vpc_id      = aws_vpc.main.id
 
-  # PostgreSQL port from allowed IPs
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_cidr_blocks
-    description = "PostgreSQL access from allowed IPs"
-  }
+  # Note: All ingress rules are defined as separate aws_security_group_rule resources
+  # to avoid conflicts with rules managed elsewhere (e.g., ECS tasks rule in ecs-backend.tf)
 
   egress {
     from_port   = 0
@@ -138,6 +132,17 @@ resource "aws_security_group" "rds" {
     Project     = var.project_name
     Environment = var.environment
   }
+}
+
+# Separate security group rule for allowed CIDR blocks (e.g., your local IP)
+resource "aws_security_group_rule" "rds_from_allowed_ips" {
+  type              = "ingress"
+  from_port         = 5432
+  to_port           = 5432
+  protocol          = "tcp"
+  cidr_blocks       = var.allowed_cidr_blocks
+  security_group_id = aws_security_group.rds.id
+  description       = "PostgreSQL access from allowed IPs"
 }
 
 # RDS PostgreSQL Instance

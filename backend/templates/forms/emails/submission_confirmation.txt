@@ -1,0 +1,12 @@
+Thank you for your submission!
+
+Form: {{ form_title }}
+Business: {{ business_name }}
+Submitted: {{ submitted_at|date:"F d, Y g:i A" }}
+
+{% if confirmation_message %}
+{{ confirmation_message }}
+{% endif %}
+
+---
+This is an automated confirmation from PopMap.

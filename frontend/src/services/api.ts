@@ -10,7 +10,12 @@ import type {
   SubscriptionPlan,
   Subscription,
   CreateCheckoutSessionRequest,
-  CheckoutSessionResponse
+  CheckoutSessionResponse,
+  FormTemplate,
+  FormField,
+  FormSubmission,
+  FormSubmissionRequest,
+  FormTemplateFormData
 } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -133,6 +138,42 @@ export const billingApi = {
     apiClient.post('/billing/subscription/cancel/', {
       cancel_at_period_end: cancelAtPeriodEnd
     }),
+}
+
+// Forms API
+export const formsApi = {
+  // Form Templates
+  getTemplates: (): Promise<AxiosResponse<FormTemplate[]>> =>
+    apiClient.get('/forms/templates/'),
+
+  getTemplateById: (id: number): Promise<AxiosResponse<FormTemplate>> =>
+    apiClient.get(`/forms/templates/${id}/`),
+
+  createTemplate: (data: FormTemplateFormData): Promise<AxiosResponse<FormTemplate>> =>
+    apiClient.post('/forms/templates/', data),
+
+  updateTemplate: (id: number, data: Partial<FormTemplateFormData>): Promise<AxiosResponse<FormTemplate>> =>
+    apiClient.patch(`/forms/templates/${id}/`, data),
+
+  deleteTemplate: (id: number): Promise<AxiosResponse<void>> =>
+    apiClient.delete(`/forms/templates/${id}/`),
+
+  // Form Fields
+  createField: (data: Partial<FormField>): Promise<AxiosResponse<FormField>> =>
+    apiClient.post('/forms/fields/', data),
+
+  updateField: (id: number, data: Partial<FormField>): Promise<AxiosResponse<FormField>> =>
+    apiClient.patch(`/forms/fields/${id}/`, data),
+
+  deleteField: (id: number): Promise<AxiosResponse<void>> =>
+    apiClient.delete(`/forms/fields/${id}/`),
+
+  // Form Submissions
+  submitForm: (templateId: number, data: FormSubmissionRequest): Promise<AxiosResponse<{ message: string; submission_id: number }>> =>
+    apiClient.post(`/forms/templates/${templateId}/submit/`, data),
+
+  getSubmissions: (templateId: number): Promise<AxiosResponse<FormSubmission[]>> =>
+    apiClient.get(`/forms/templates/${templateId}/submissions/`),
 }
 
 export default apiClient

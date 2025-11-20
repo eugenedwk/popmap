@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { eventsApi } from '../services/api'
+import { eventsApi, formsApi } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Calendar, Clock, MapPin, Loader2, ArrowLeft, Heart, CheckCircle2, Users, ExternalLink } from 'lucide-react'
 import { ShareButtons } from './ShareButtons'
 import { EventMetaTags } from './EventMetaTags'
+import { FormRenderer } from './FormRenderer'
 
 function EventDetailPage() {
   const { eventId: eventIdParam } = useParams<{ eventId: string }>()
@@ -29,6 +30,17 @@ function EventDetailPage() {
       return response.data
     },
     enabled: !!eventId,
+  })
+
+  // Fetch form template if event has one
+  const { data: formTemplate } = useQuery({
+    queryKey: ['form-template', event?.form_template],
+    queryFn: async () => {
+      if (!event?.form_template) return null
+      const response = await formsApi.getTemplateById(event.form_template)
+      return response.data
+    },
+    enabled: !!event?.form_template
   })
 
   // RSVP mutation
@@ -377,6 +389,13 @@ function EventDetailPage() {
               </CardContent>
             )}
           </Card>
+
+          {/* Event Registration Form */}
+          {formTemplate && (
+            <div className="mt-6">
+              <FormRenderer templateId={formTemplate.id} />
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>

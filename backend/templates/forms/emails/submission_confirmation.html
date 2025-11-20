@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #007435; color: white; padding: 20px; border-radius: 5px 5px 0 0; }
+        .header h2 { margin: 0; }
+        .content { padding: 30px; background: #f9f9f9; border-radius: 0 0 5px 5px; }
+        .message { padding: 20px; background: white; border-radius: 5px; margin: 20px 0; }
+        .footer { margin-top: 20px; padding: 15px; text-align: center; font-size: 12px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>✓ Thank You for Your Submission!</h2>
+        </div>
+        <div class="content">
+            <p>Your form submission has been received successfully.</p>
+            
+            <div class="message">
+                <p><strong>Form:</strong> {{ form_title }}</p>
+                <p><strong>Business:</strong> {{ business_name }}</p>
+                <p><strong>Submitted:</strong> {{ submitted_at|date:"F d, Y g:i A" }}</p>
+            </div>
+            
+            {% if confirmation_message %}
+            <div class="message">
+                {{ confirmation_message|linebreaks }}
+            </div>
+            {% endif %}
+        </div>
+        <div class="footer">
+            This is an automated confirmation from PopMap.
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,14 @@
+New Form Submission: {{ form_title }}
+
+Business: {{ business_name }}
+Submitted: {{ submitted_at|date:"F d, Y g:i A" }}
+{% if submitter_email %}Submitter Email: {{ submitter_email }}{% endif %}
+{% if event %}Related Event: {{ event.title }}{% endif %}
+
+Responses:
+{% for response in responses %}
+{{ response.label }}: {{ response.value }}
+{% endfor %}
+
+---
+This is an automated notification from PopMap.
