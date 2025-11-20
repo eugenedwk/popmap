@@ -399,6 +399,22 @@ resource "aws_ecs_task_definition" "backend" {
         {
           name  = "DEFAULT_FROM_EMAIL"
           value = "noreply@popmap.co"
+        },
+        {
+          name  = "AWS_COGNITO_USER_POOL_ID"
+          value = "us-east-1_0F9BvA7eq"
+        },
+        {
+          name  = "AWS_COGNITO_APP_CLIENT_ID"
+          value = "48hli8rf4r3m1gc6ii9nm185r5"
+        },
+        {
+          name  = "AWS_COGNITO_REGION"
+          value = "us-east-1"
+        },
+        {
+          name  = "AWS_COGNITO_DOMAIN"
+          value = "popmap-auth"
         }
       ]
 
