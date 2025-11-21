@@ -49,13 +49,27 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Handle 401 responses (token expired or invalid)
+// Handle 401/403 responses (token expired or invalid)
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      console.error('Authentication failed - token may be expired');
-      // Could trigger a re-authentication flow here
+    // Only clear session if we sent a token and got 401/403
+    const hadAuthToken = error.config?.headers?.Authorization;
+    const isAuthError = error.response?.status === 401 || error.response?.status === 403;
+
+    if (hadAuthToken && isAuthError) {
+      console.error('Authentication failed - token may be expired or invalid');
+      // If we sent a token but got 401/403, the token is invalid
+      // Clear the session to stop sending bad tokens
+      try {
+        const { signOut } = await import('aws-amplify/auth');
+        await signOut({ global: false });
+        console.log('Cleared invalid session');
+        // Reload to show logged out state
+        window.location.reload();
+      } catch (e) {
+        console.debug('Could not clear session:', e);
+      }
     }
     return Promise.reject(error);
   }

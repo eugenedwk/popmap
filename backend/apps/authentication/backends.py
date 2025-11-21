@@ -53,13 +53,26 @@ class CognitoAuthentication(authentication.BaseAuthentication):
         jwks_client = PyJWKClient(jwks_url)
         signing_key = jwks_client.get_signing_key_from_jwt(token)
 
+        # Cognito access tokens don't have 'aud' claim, only 'client_id'
+        # ID tokens have 'aud' claim
+        # Decode without audience verification first
         payload = jwt.decode(
             token,
             signing_key.key,
             algorithms=['RS256'],
-            audience=app_client_id,
-            options={'verify_exp': True}
+            options={'verify_exp': True, 'verify_aud': False}
         )
+
+        # Verify the token is for our app
+        # Access tokens have client_id, ID tokens have aud
+        token_client_id = payload.get('client_id') or payload.get('aud')
+        if token_client_id != app_client_id:
+            raise jwt.InvalidTokenError('Token is not for this application')
+
+        # Verify token_use is either 'access' or 'id'
+        token_use = payload.get('token_use')
+        if token_use not in ['access', 'id']:
+            raise jwt.InvalidTokenError('Invalid token_use claim')
 
         return payload
 
