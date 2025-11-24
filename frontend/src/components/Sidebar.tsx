@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
   Grid3x3,
@@ -6,9 +7,11 @@ import {
   Store,
   CalendarPlus,
   Building2,
+  Briefcase,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '../contexts/AuthContext';
 
 const views = [
   { id: 'map', label: 'Map View', icon: Map, description: 'Interactive map' },
@@ -48,6 +51,10 @@ const submitOptions = [
 ];
 
 function Sidebar({ currentView, onViewChange }) {
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+  const isBusinessOwner = isAuthenticated && user?.is_business_owner;
+
   return (
     <div className="w-16 md:w-64 bg-card border-r border-border h-full flex flex-col">
       <div className="p-3 md:p-6 border-b border-border">
@@ -96,6 +103,35 @@ function Sidebar({ currentView, onViewChange }) {
             })}
           </ul>
         </div>
+
+        {/* Business Owner Section */}
+        {isBusinessOwner && (
+          <>
+            <Separator className="my-4" />
+            <div className="mb-6">
+              <h3 className="hidden md:block text-xs font-semibold text-muted-foreground mb-2 px-4">
+                BUSINESS OWNER
+              </h3>
+              <ul className="space-y-2">
+                <li>
+                  <button
+                    onClick={() => navigate('/my-businesses')}
+                    className="w-full flex items-center md:items-start justify-center md:justify-start gap-3 px-3 md:px-4 py-3 rounded-lg transition-colors text-left hover:bg-accent hover:text-accent-foreground"
+                    title="My Businesses"
+                  >
+                    <Briefcase className="h-5 w-5 md:mt-0.5 flex-shrink-0" />
+                    <div className="hidden md:block flex-1 min-w-0">
+                      <div className="font-medium">My Businesses</div>
+                      <div className="text-xs text-muted-foreground">
+                        Manage your businesses
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </>
+        )}
 
         {/* Temporarily hidden - Submit Business and Event forms */}
         {/* <Separator className="my-4" />

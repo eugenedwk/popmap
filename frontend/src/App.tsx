@@ -17,6 +17,7 @@ import { Login } from './components/Login';
 import { AuthCallback } from './components/AuthCallback';
 import { BusinessOnboarding } from './components/BusinessOnboarding';
 import { BusinessDashboard } from './components/BusinessDashboard';
+import { BusinessOwnerHub } from './components/BusinessOwnerHub';
 import { FormTemplateBuilder } from './components/FormTemplateBuilder';
 import { FormSubmissionsList } from './components/FormSubmissionsList';
 import { useAuth } from './contexts/AuthContext';
@@ -172,6 +173,7 @@ function AppContent() {
           {/* Form Builder Routes - Full screen, no sidebar, scrollable */}
           <Route path="/forms/:templateId/submissions" element={<div className="flex-1 overflow-auto"><FormSubmissionsList /></div>} />
           <Route path="/business/:businessId/dashboard" element={<div className="flex-1 overflow-auto"><BusinessDashboard /></div>} />
+          <Route path="/my-businesses" element={<div className="flex-1 overflow-auto"><BusinessOwnerHub /></div>} />
 
           {/* Regular Routes - With sidebar (hidden on mobile) */}
           <Route
