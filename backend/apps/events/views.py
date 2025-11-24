@@ -1,8 +1,9 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.utils import timezone
+from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Business, Event, Category, EventRSVP
@@ -12,6 +13,11 @@ from .serializers import (
     EventListSerializer,
     CategorySerializer,
     EventRSVPSerializer
+)
+from .permissions import (
+    IsBusinessOwnerOrReadOnly,
+    IsEventCreatorOrReadOnly,
+    CanCreateEvent
 )
 
 
@@ -29,8 +35,11 @@ class BusinessViewSet(viewsets.ModelViewSet):
     API endpoint for businesses.
     - GET: View verified businesses
     - POST: Submit business registration (pending verification)
+    - PUT/PATCH: Update your own business
+    - DELETE: Delete your own business (admin only)
     """
     serializer_class = BusinessSerializer
+    permission_classes = [IsBusinessOwnerOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
@@ -40,6 +49,10 @@ class BusinessViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return Business.objects.filter(is_verified=True)
         return Business.objects.all()
+
+    def perform_create(self, serializer):
+        """Set the owner to the current user when creating a business"""
+        serializer.save(owner=self.request.user)
 
     def create(self, request, *args, **kwargs):
         """Create a new business (unverified by default)"""
@@ -57,13 +70,23 @@ class BusinessViewSet(viewsets.ModelViewSet):
             headers=headers
         )
 
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def my_businesses(self, request):
+        """Get all businesses owned by the authenticated user"""
+        businesses = Business.objects.filter(owner=request.user)
+        serializer = self.get_serializer(businesses, many=True)
+        return Response(serializer.data)
+
 
 class EventViewSet(viewsets.ModelViewSet):
     """
     API endpoint for events.
     - GET: View approved events
-    - POST: Submit event (pending approval)
+    - POST: Submit event (pending approval) - requires authentication
+    - PUT/PATCH: Update your own event
+    - DELETE: Delete your own event
     """
+    permission_classes = [IsEventCreatorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['businesses', 'status']
     ordering_fields = ['start_datetime', 'created_at']
@@ -76,6 +99,15 @@ class EventViewSet(viewsets.ModelViewSet):
                 'businesses',
                 'businesses__categories'
             ).filter(status='approved')
+        elif self.action == 'my_events':
+            # For my_events, show all events created by user or associated with their businesses
+            return Event.objects.prefetch_related(
+                'businesses',
+                'businesses__categories'
+            ).filter(
+                models.Q(created_by=self.request.user) |
+                models.Q(businesses__owner=self.request.user)
+            ).distinct()
         return Event.objects.prefetch_related(
             'businesses',
             'businesses__categories'
@@ -87,12 +119,18 @@ class EventViewSet(viewsets.ModelViewSet):
             return EventListSerializer
         return EventSerializer
 
+    def perform_create(self, serializer):
+        """Set created_by to current user and status to pending for user-created events"""
+        serializer.save(
+            created_by=self.request.user,
+            status='pending'  # All user-submitted events require approval
+        )
+
     def create(self, request, *args, **kwargs):
         """Create a new event (pending approval by default)"""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # Event will be created with status='pending' (if set in data) or 'approved' (model default)
-        # For user submissions, we should set it to 'pending'
+        # Event will be created with status='pending' and created_by set to current user
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(
@@ -103,6 +141,13 @@ class EventViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
             headers=headers
         )
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def my_events(self, request):
+        """Get all events created by the authenticated user or associated with their businesses"""
+        events = self.get_queryset()
+        serializer = self.get_serializer(events, many=True)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def active(self, request):

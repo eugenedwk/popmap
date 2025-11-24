@@ -85,6 +85,7 @@ export const categoriesApi = {
 export const businessesApi = {
   getAll: (): Promise<AxiosResponse<Business[]>> => apiClient.get('/businesses/'),
   getById: (id: number): Promise<AxiosResponse<Business>> => apiClient.get(`/businesses/${id}/`),
+  getMyBusinesses: (): Promise<AxiosResponse<Business[]>> => apiClient.get('/businesses/my_businesses/'),
   create: (data: BusinessFormData): Promise<AxiosResponse<ApiResponse<Business>>> => {
     const formData = new FormData()
     Object.keys(data).forEach(key => {
@@ -108,6 +109,7 @@ export const eventsApi = {
   getActive: (): Promise<AxiosResponse<Event[]>> => apiClient.get('/events/active/'),
   getMapData: (): Promise<AxiosResponse<Event[]>> => apiClient.get('/events/map_data/'),
   getById: (id: number): Promise<AxiosResponse<Event>> => apiClient.get(`/events/${id}/`),
+  getMyEvents: (): Promise<AxiosResponse<Event[]>> => apiClient.get('/events/my_events/'),
   create: (data: EventFormData): Promise<AxiosResponse<ApiResponse<Event>>> => {
     const formData = new FormData()
     Object.keys(data).forEach(key => {
@@ -121,6 +123,20 @@ export const eventsApi = {
       }
     })
     return apiClient.post('/events/', formData)
+  },
+  update: (id: number, data: Partial<EventFormData>): Promise<AxiosResponse<Event>> => {
+    const formData = new FormData()
+    Object.keys(data).forEach(key => {
+      const value = data[key as keyof Partial<EventFormData>]
+      if (key === 'image' && value) {
+        formData.append(key, value as File)
+      } else if (key === 'business_ids' && Array.isArray(value)) {
+        value.forEach((id: number) => formData.append('business_ids', id.toString()))
+      } else if (value !== null && value !== undefined && value !== '') {
+        formData.append(key, value as string)
+      }
+    })
+    return apiClient.patch(`/events/${id}/`, formData)
   },
   joinEvent: (eventId: number, businessId: number): Promise<AxiosResponse<{ message: string; event_id: number; business_id: number }>> =>
     apiClient.post(`/events/${eventId}/join/`, { business_id: businessId }),

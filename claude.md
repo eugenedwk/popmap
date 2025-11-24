@@ -308,3 +308,111 @@ New exploration tasks for future consideration:
 - Task 19: Geofenced check-in system (builds on Task #12)
 
 **Last Updated**: 2025-11-23
+
+---
+
+## GDPR & Privacy Considerations
+
+### Legal Basis for Data Processing
+- **Authentication data**: Contractual necessity (to provide the service)
+- **Location data**: Explicit consent (especially for geofenced check-ins - Task #19)
+- **RSVP data**: Legitimate interest or consent
+- **Payment data**: Contractual necessity (Stripe is GDPR compliant)
+- **Marketing emails**: Explicit consent required (Task #7 email reminders)
+
+### User Rights Implementation (Required Features)
+- **Right to Access**: API endpoint for users to download their data
+- **Right to Erasure**: Account deletion that removes all personal data
+- **Right to Portability**: Export user data in machine-readable format (JSON/CSV)
+- **Right to Rectification**: Users can edit their profile data
+- **Right to Object**: Opt-out of marketing emails and data processing
+
+### Consent Management by Feature
+- **Task #7 (Email Reminders)**: Explicit opt-in checkbox, not pre-checked
+- **Task #2 (Geolocation)**: Browser prompt + clear explanation of why location is needed
+- **Task #19 (Geofenced Check-ins)**: Separate consent from general location access
+- **Social SSO (Tasks #4, #5)**: Clear disclosure of what data is collected from social providers
+- **Task #18 (Instagram Embedding)**: Only public posts, no personal data scraping
+
+### Privacy Policy & Transparency Requirements
+Must document:
+- What data is collected (auth, location, RSVPs, payment, behavior)
+- Why it's collected (provide service, improve UX, billing)
+- Data retention periods
+- Third-party data sharing (AWS, Stripe, social platforms)
+- User rights and how to exercise them
+- Cookie usage
+
+### Third-Party Processors (Data Processing Agreements Required)
+- AWS Cognito (authentication)
+- Stripe (payments) - ✅ GDPR compliant
+- AWS SES (email reminders - Task #7)
+- Facebook/TikTok/Google (SSO providers)
+- Future: Instagram API (Task #18)
+
+**Action needed**: Ensure Data Processing Agreements (DPAs) are in place with all processors.
+
+### High-Risk Features Requiring Privacy Impact Assessment
+**Task #19 (Geofenced Check-ins)** is particularly sensitive:
+- Privacy Impact Assessment (PIA) required before implementation
+- Continuous location tracking = high privacy risk
+- Must minimize data collection (only during check-in window)
+- Clear communication: "We only track your location when you initiate a check-in"
+- Consider: Single location snapshot vs continuous tracking
+- Implement fraud prevention without excessive surveillance
+
+### Data Retention & Deletion Policies
+Define retention periods for:
+- Active user accounts: Retain while account is active
+- Deleted accounts: Hard delete within 30 days
+- RSVP history: Delete with account or after event + X months
+- Payment records: May need retention for tax/legal reasons (consult accountant)
+- Location data (Task #19): Delete immediately after check-in verification
+- Event reminders: Delete sent email logs after X months
+
+### International Data Transfers
+- If using AWS US regions: Standard Contractual Clauses (SCCs) may be required
+- Consider AWS EU regions for EU users
+- AWS offers GDPR-compliant infrastructure
+
+### Technical Implementation Checklist
+- [ ] Privacy policy page
+- [ ] Cookie consent banner
+- [ ] Terms of service with GDPR rights
+- [ ] Account settings page with data controls:
+  - [ ] Download my data (JSON/CSV export)
+  - [ ] Delete my account
+  - [ ] Email preferences (opt-out of reminders)
+  - [ ] Manage social connections
+- [ ] Data deletion API endpoints
+- [ ] Automated data export functionality
+- [ ] Audit logging for data access/changes
+- [ ] Encryption at rest and in transit
+- [ ] Secure password storage (✅ Cognito handles this)
+
+### GDPR Considerations by Feature
+**Task #13 (Business page customization)**: Ensure businesses can't upload images that violate GDPR (e.g., photos with identifiable people without consent)
+
+**Task #16 (Gift subscriptions)**: Don't require personal data from gift recipients until they accept
+
+**Task #18 (Instagram embedding)**: Only embed public posts, respect user privacy settings
+
+### Regional Compliance
+**If you have EU users:**
+- GDPR applies regardless of where business is based
+- Appoint Data Protection Officer if processing large amounts of data
+- Register with relevant EU data protection authority
+
+**If you're US-only:**
+- Consider California CCPA (similar requirements to GDPR)
+- Privacy policy still strongly recommended
+
+### Immediate Priority Action Items
+1. **Create Privacy Policy** - highest priority
+2. **Add consent checkboxes** to registration/signup flows
+3. **Implement account deletion** functionality
+4. **Add email unsubscribe links** (for Task #7)
+5. **Document data flows** (what data goes where)
+6. **Review AWS/Stripe DPAs** to ensure compliance
+7. **Implement data export endpoint** (user right to access)
+8. **Create cookie consent banner** if using analytics/tracking
