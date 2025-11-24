@@ -77,6 +77,22 @@ class BusinessViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(businesses, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'], url_path='by-subdomain/(?P<subdomain>[^/.]+)')
+    def by_subdomain(self, request, subdomain=None):
+        """Get business by custom subdomain"""
+        try:
+            business = Business.objects.get(
+                custom_subdomain=subdomain,
+                is_verified=True
+            )
+            serializer = self.get_serializer(business)
+            return Response(serializer.data)
+        except Business.DoesNotExist:
+            return Response(
+                {'error': f'No business found with subdomain: {subdomain}'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 
 class EventViewSet(viewsets.ModelViewSet):
     """

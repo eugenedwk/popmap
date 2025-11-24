@@ -11,7 +11,7 @@ class SubdomainMiddleware:
     1. Extracts the subdomain
     2. Looks up the business with that custom_subdomain
     3. Attaches the business to the request object
-    4. Can redirect or modify the response based on the subdomain
+    4. For non-API requests on subdomain root, redirects to business profile
     """
 
     def __init__(self, get_response):
@@ -31,14 +31,24 @@ class SubdomainMiddleware:
         if subdomain and subdomain not in ['www', 'api', 'admin']:
             # Look up business by subdomain
             try:
-                business = Business.objects.get(custom_subdomain=subdomain)
+                business = Business.objects.get(
+                    custom_subdomain=subdomain,
+                    is_verified=True  # Only show verified businesses
+                )
                 request.business = business
+
+                # For root path on subdomain, redirect to business profile
+                # This makes mybusiness.popmap.co redirect to mybusiness.popmap.co/p/123
+                if request.path in ['/', ''] and not request.path.startswith('/api'):
+                    return redirect(f'/p/{business.id}/')
+
             except Business.DoesNotExist:
-                # Subdomain doesn't exist - could return 404 or redirect
-                return JsonResponse({
-                    'error': 'Business not found',
-                    'message': f'No business found with subdomain: {subdomain}'
-                }, status=404)
+                # For non-API requests, return 404 page
+                if not request.path.startswith('/api'):
+                    return JsonResponse({
+                        'error': 'Business not found',
+                        'message': f'No business found with subdomain: {subdomain}'
+                    }, status=404)
 
         response = self.get_response(request)
         return response
