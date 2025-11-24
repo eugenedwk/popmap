@@ -145,6 +145,90 @@
   - `frontend/src/types/index.ts` - Business interface
   - `frontend/src/services/api.ts` - Added update method
 
+## Phase 4: UX Enhancements & Mobile Optimization
+
+### 11. Custom map pins to reflect event type
+- **Status**: Completed
+- **Type**: Feature - UX Improvement
+- **Description**: Different pin icons/colors for different event types on the map
+- **Implementation**:
+  - ✅ Frontend: CustomMapPin component with category-based icons and colors
+  - ✅ Frontend: Lucide icons for each category (food&bev, dessert, arts+crafts, vintage)
+  - ✅ Frontend: Color-coded pins with hover animations
+  - ✅ Map: MapView updated to use CustomMapPin for all event markers
+- **Files Created**:
+  - `frontend/src/components/CustomMapPin.tsx`
+- **Files Modified**:
+  - `frontend/src/components/MapView.tsx`
+
+### 12. Attendee profile page with RSVP history
+- **Status**: Pending
+- **Type**: Feature - User Profile
+- **Description**: Profile page showing previously RSVP'd events
+- **Future**: Verified attendance tracking
+- **Implementation**:
+  - Backend: API endpoint for user's RSVP history
+  - Frontend: AttendeeProfile component
+  - Frontend: List of past and upcoming RSVP'd events
+  - Frontend: Filter by "Interested" vs "Going"
+  - Frontend: Placeholder for future verified attendance badges
+
+### 13. Business page customization options (PREMIUM)
+- **Status**: Pending
+- **Type**: Feature - Premium Business Tools
+- **Description**: Allow paying businesses to customize their page appearance
+- **Dependencies**: Requires active subscription (Task #9)
+- **Implementation**:
+  - Backend: Business model fields (background_image, default_view_mode)
+  - Backend: Subscription check for customization access
+  - Frontend: BusinessPageSettings component (premium only)
+  - Frontend: Background image upload/URL input
+  - Frontend: Toggle between map view and date/list view
+  - Frontend: Save preferences per business
+  - Frontend: Upgrade prompt for non-subscribed businesses
+
+### 14. Mobile responsive sidebar and layout
+- **Status**: Completed
+- **Type**: Feature - Mobile UX
+- **Description**: Optimize mobile layout with bottom navigation and full-width cards
+- **Implementation**:
+  - ✅ Frontend: Hide sidebar on mobile breakpoints (<768px) using Tailwind classes
+  - ✅ Frontend: Fixed bottom navigation bar with 4 main views (Map, List, Cards, Brands)
+  - ✅ Frontend: Full-width cards on mobile (no side borders, edge-to-edge)
+  - ✅ Frontend: Reduced padding on mobile for better space utilization
+  - ✅ Frontend: Touch-friendly 64px bottom bar with icons and labels
+  - ✅ Frontend: Bottom padding (pb-16) added to content areas to prevent overlap
+- **Files Created**:
+  - `frontend/src/components/MobileNavigation.tsx`
+- **Files Modified**:
+  - `frontend/src/App.tsx` - Added mobile navigation, hidden sidebar on mobile
+  - `frontend/src/components/CardView.tsx` - Mobile-responsive padding and full-width cards
+  - `frontend/src/components/ListView.tsx` - Mobile-responsive padding and full-width cards
+
+### 15. Add paywall to inquiry form builder (PREMIUM)
+- **Status**: Pending
+- **Type**: Feature - Premium Business Tools
+- **Description**: Restrict existing form builder to paying subscribers only
+- **Dependencies**: Requires active subscription (Task #9)
+- **Note**: Form builder already exists, just needs subscription gating
+- **Implementation**:
+  - Backend: Add subscription check to form builder endpoints
+  - Frontend: Hide/disable form builder for non-subscribed users
+  - Frontend: Show upgrade prompt when accessing form builder
+  - Frontend: Display premium badge on form builder feature
+
+### 16. Gift premium subscriptions via Django admin
+- **Status**: Pending
+- **Type**: Feature - Admin Tools
+- **Description**: Allow admins to manually grant premium subscriptions
+- **Implementation**:
+  - Backend: Admin action to gift subscription
+  - Backend: Create subscription without Stripe payment
+  - Backend: Set custom expiration dates
+  - Backend: Add notes/reason for gifted subscription
+  - Backend: Track gifted vs paid subscriptions
+  - Backend: Email notification to recipient
+
 ---
 
 ## Notes
@@ -152,6 +236,7 @@
 **Dependencies:**
 - Tasks 5-7 are sequential (auth → attendees → RSVP → reminders)
 - Task 10 depends on Task 9 (payment must be set up before custom subdomains)
+- Tasks 13, 15, 16 depend on Task 9 (payment/subscription system)
 
 **Quick Wins Strategy:**
 Tasks 1-3 are independent and provide immediate value. Start here to build momentum.
@@ -159,4 +244,9 @@ Tasks 1-3 are independent and provide immediate value. Start here to build momen
 **Phase 3 Completion:**
 All Phase 3 tasks (8-10) have been completed and are ready for production deployment. Stripe configuration and DNS setup required for full activation.
 
-**Last Updated**: 2025-11-15
+**Phase 4 Progress:**
+- ✅ Tasks 11 and 14 completed (custom map pins and mobile responsive layout)
+- Tasks 12, 13, 15, 16 pending
+- Tasks 13, 15, 16 depend on subscription system (Task #9)
+
+**Last Updated**: 2025-11-23

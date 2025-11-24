@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Sidebar from './components/Sidebar';
+import MobileNavigation from './components/MobileNavigation';
 import ListView from './components/ListView';
 import CardView from './components/CardView';
 import MapView from './components/MapView';
@@ -172,18 +173,24 @@ function AppContent() {
           <Route path="/forms/:templateId/submissions" element={<div className="flex-1 overflow-auto"><FormSubmissionsList /></div>} />
           <Route path="/business/:businessId/dashboard" element={<div className="flex-1 overflow-auto"><BusinessDashboard /></div>} />
 
-          {/* Regular Routes - With sidebar */}
+          {/* Regular Routes - With sidebar (hidden on mobile) */}
           <Route
             path="/p/:businessId"
             element={
               <>
-                <Sidebar
+                <div className="hidden md:block">
+                  <Sidebar
+                    currentView={currentView}
+                    onViewChange={handleViewChange}
+                  />
+                </div>
+                <div className="flex-1 overflow-auto pb-16 md:pb-0">
+                  <BusinessProfile />
+                </div>
+                <MobileNavigation
                   currentView={currentView}
                   onViewChange={handleViewChange}
                 />
-                <div className="flex-1 overflow-auto">
-                  <BusinessProfile />
-                </div>
               </>
             }
           />
@@ -191,13 +198,19 @@ function AppContent() {
             path="/e/:eventId"
             element={
               <>
-                <Sidebar
+                <div className="hidden md:block">
+                  <Sidebar
+                    currentView={currentView}
+                    onViewChange={handleViewChange}
+                  />
+                </div>
+                <div className="flex-1 overflow-auto pb-16 md:pb-0">
+                  <EventDetailPage />
+                </div>
+                <MobileNavigation
                   currentView={currentView}
                   onViewChange={handleViewChange}
                 />
-                <div className="flex-1 overflow-auto">
-                  <EventDetailPage />
-                </div>
               </>
             }
           />
@@ -205,13 +218,19 @@ function AppContent() {
             path="/my-rsvps"
             element={
               <>
-                <Sidebar
+                <div className="hidden md:block">
+                  <Sidebar
+                    currentView={currentView}
+                    onViewChange={handleViewChange}
+                  />
+                </div>
+                <div className="flex-1 overflow-auto pb-16 md:pb-0">
+                  <MyRSVPs />
+                </div>
+                <MobileNavigation
                   currentView={currentView}
                   onViewChange={handleViewChange}
                 />
-                <div className="flex-1 overflow-auto">
-                  <MyRSVPs />
-                </div>
               </>
             }
           />
@@ -219,13 +238,19 @@ function AppContent() {
             path="/brands"
             element={
               <>
-                <Sidebar
+                <div className="hidden md:block">
+                  <Sidebar
+                    currentView={currentView}
+                    onViewChange={handleViewChange}
+                  />
+                </div>
+                <div className="flex-1 overflow-auto pb-16 md:pb-0">
+                  <BrandsView onBusinessClick={handleBusinessClick} />
+                </div>
+                <MobileNavigation
                   currentView={currentView}
                   onViewChange={handleViewChange}
                 />
-                <div className="flex-1 overflow-auto">
-                  <BrandsView onBusinessClick={handleBusinessClick} />
-                </div>
               </>
             }
           />
@@ -233,11 +258,17 @@ function AppContent() {
             path="/*"
             element={
               <>
-                <Sidebar
+                <div className="hidden md:block">
+                  <Sidebar
+                    currentView={currentView}
+                    onViewChange={handleViewChange}
+                  />
+                </div>
+                <div className="flex-1 overflow-auto pb-16 md:pb-0">{renderView()}</div>
+                <MobileNavigation
                   currentView={currentView}
                   onViewChange={handleViewChange}
                 />
-                <div className="flex-1 overflow-auto">{renderView()}</div>
               </>
             }
           />

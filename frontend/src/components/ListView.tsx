@@ -136,16 +136,16 @@ function ListView({ onBusinessClick }) {
 
   return (
     <div className="h-full bg-background">
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Upcoming Events</h1>
-          <p className="text-muted-foreground">
+      <div className="max-w-4xl mx-auto p-3 md:p-6">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold">Upcoming Events</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Showing {filteredEvents.length} of {events?.length || 0} events
           </p>
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="mb-6 space-y-4 md:space-y-0 md:flex md:gap-4">
+        <div className="mb-4 md:mb-6 space-y-4 md:space-y-0 md:flex md:gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -198,7 +198,7 @@ function ListView({ onBusinessClick }) {
                     {groupedEvents[dateKey].map((event) => (
                       <Card
                         key={event.id}
-                        className="hover:shadow-md transition-shadow cursor-pointer"
+                        className="hover:shadow-md transition-shadow cursor-pointer md:rounded-lg rounded-none border-x-0 md:border-x"
                         onClick={() => navigate(`/e/${event.id}`)}
                       >
                         <CardHeader>

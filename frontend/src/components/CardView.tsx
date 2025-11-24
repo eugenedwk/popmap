@@ -144,16 +144,16 @@ function CardView({ onBusinessClick }) {
 
   return (
     <div className="h-full bg-background">
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Events by Category</h1>
-          <p className="text-muted-foreground">
+      <div className="max-w-7xl mx-auto p-3 md:p-6">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold">Events by Category</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Showing {filteredEvents.length} of {events?.length || 0} events across {categories.length} {categories.length === 1 ? 'category' : 'categories'}
           </p>
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="mb-6 space-y-4 md:space-y-0 md:flex md:gap-4">
+        <div className="mb-4 md:mb-6 space-y-4 md:space-y-0 md:flex md:gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -205,11 +205,11 @@ function CardView({ onBusinessClick }) {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                     {groupedEvents[category].map((event) => (
                       <Card
                         key={`${category}-${event.id}`}
-                        className="hover:shadow-lg transition-shadow cursor-pointer"
+                        className="hover:shadow-lg transition-shadow cursor-pointer md:rounded-lg rounded-none border-x-0 md:border-x"
                         onClick={() => navigate(`/e/${event.id}`)}
                       >
                         {event.image && (

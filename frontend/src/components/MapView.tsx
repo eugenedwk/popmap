@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Calendar, Clock, MapPin, Loader2, X, ExternalLink } from 'lucide-react'
+import { CustomMapPin } from './CustomMapPin'
 import type { Event } from '../types'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
@@ -130,7 +131,9 @@ function MapView({ onBusinessClick }: MapViewProps) {
               key={event.id}
               position={{ lat: parseFloat(event.latitude), lng: parseFloat(event.longitude) }}
               onClick={() => handleMarkerClick(event)}
-            />
+            >
+              <CustomMapPin categories={event.categories || []} />
+            </AdvancedMarker>
           ))}
 
           {/* Minimal InfoWindow for quick preview */}
