@@ -14,8 +14,8 @@ class CategoryAdmin(admin.ModelAdmin):
 class BusinessAdmin(admin.ModelAdmin):
     list_display = ['name', 'custom_subdomain', 'contact_email', 'is_verified', 'available_for_hire', 'get_categories', 'created_at']
     list_filter = ['is_verified', 'available_for_hire', 'categories', 'created_at']
-    search_fields = ['name', 'contact_email', 'description', 'custom_subdomain']
-    readonly_fields = ['created_at', 'updated_at']
+    search_fields = ['name', 'contact_email', 'description', 'custom_subdomain', 'owner__email', 'owner__username']
+    readonly_fields = ['created_at', 'updated_at', 'get_owner_email']
     filter_horizontal = ['categories']
 
     fieldsets = (
@@ -31,13 +31,20 @@ class BusinessAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Account & Verification', {
-            'fields': ('owner', 'is_verified', 'available_for_hire')
+            'fields': ('get_owner_email', 'owner', 'is_verified', 'available_for_hire')
         }),
         ('Metadata', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
+
+    def get_owner_email(self, obj):
+        """Display owner's email for easy reading"""
+        if obj.owner:
+            return f"{obj.owner.email} ({obj.owner.username})"
+        return "No owner assigned"
+    get_owner_email.short_description = 'Owner Email'
 
     def get_categories(self, obj):
         """Display categories as comma-separated list"""
@@ -49,8 +56,8 @@ class BusinessAdmin(admin.ModelAdmin):
 class EventAdmin(admin.ModelAdmin):
     list_display = ['title', 'get_host_business', 'get_businesses', 'start_datetime', 'end_datetime', 'status', 'created_at']
     list_filter = ['status', 'start_datetime', 'created_at', 'host_business', 'businesses']
-    search_fields = ['title', 'description', 'businesses__name', 'host_business__name', 'address']
-    readonly_fields = ['created_at', 'updated_at', 'created_by']
+    search_fields = ['title', 'description', 'businesses__name', 'host_business__name', 'address', 'created_by__email', 'created_by__username']
+    readonly_fields = ['created_at', 'updated_at', 'get_created_by_email']
     date_hierarchy = 'start_datetime'
     filter_horizontal = ['businesses']
 
@@ -74,7 +81,7 @@ class EventAdmin(admin.ModelAdmin):
             'fields': ('status',)
         }),
         ('Metadata', {
-            'fields': ('created_by', 'created_at', 'updated_at'),
+            'fields': ('get_created_by_email', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
@@ -84,6 +91,13 @@ class EventAdmin(admin.ModelAdmin):
         css = {
             'all': ('admin/css/geocode.css',)
         }
+
+    def get_created_by_email(self, obj):
+        """Display creator's email for easy reading"""
+        if obj.created_by:
+            return f"{obj.created_by.email} ({obj.created_by.username})"
+        return "Created by admin"
+    get_created_by_email.short_description = 'Created By'
 
     def get_host_business(self, obj):
         """Display host business name"""
