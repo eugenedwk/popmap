@@ -229,6 +229,58 @@
   - Backend: Track gifted vs paid subscriptions
   - Backend: Email notification to recipient
 
+## Phase 5: Exploration & Future Features
+
+### 17. CMS system for a blog
+- **Status**: Exploration
+- **Type**: Feature - Content Management
+- **Description**: Explore and implement a CMS system to manage blog content
+- **Potential Approaches**:
+  - Django CMS integration
+  - Wagtail CMS (Django-based)
+  - Custom blog app with rich text editor
+  - Headless CMS (Contentful, Strapi)
+- **Considerations**:
+  - SEO optimization for blog posts
+  - Content categorization and tagging
+  - Author management
+  - Draft/publish workflow
+  - RSS feed support
+
+### 18. Instagram hashtag feed embedding capabilities
+- **Status**: Exploration
+- **Type**: Feature - Social Integration
+- **Description**: Embed Instagram posts by hashtag on event or business pages
+- **Potential Approaches**:
+  - Instagram Basic Display API
+  - Instagram Graph API (requires business account)
+  - Third-party embedding services
+  - Custom hashtag aggregation
+- **Considerations**:
+  - API rate limits and authentication
+  - Real-time vs cached feed updates
+  - Display gallery/grid layout
+  - Mobile responsiveness
+  - Moderation and filtering capabilities
+
+### 19. Geofenced check-in system for attendees
+- **Status**: Exploration
+- **Type**: Feature - Attendance Verification
+- **Description**: Allow attendees to check in to events when physically present using geolocation
+- **Implementation Ideas**:
+  - Backend: Check-in model with geolocation verification
+  - Backend: Radius-based validation (e.g., within 100m of event location)
+  - Frontend: Check-in button available only when in range
+  - Frontend: Real-time location tracking during event
+  - Gamification: Badges, points, or rewards for verified attendance
+- **Considerations**:
+  - Privacy concerns and user consent
+  - GPS accuracy and indoor locations
+  - Battery usage for continuous location tracking
+  - Fraud prevention (spoofing detection)
+  - Integration with existing RSVP system (Task #6)
+- **Dependencies**: Builds on Task #12 (Attendee profile page)
+
 ---
 
 ## Notes
@@ -248,5 +300,11 @@ All Phase 3 tasks (8-10) have been completed and are ready for production deploy
 - ✅ Tasks 11 and 14 completed (custom map pins and mobile responsive layout)
 - Tasks 12, 13, 15, 16 pending
 - Tasks 13, 15, 16 depend on subscription system (Task #9)
+
+**Phase 5 - Exploration:**
+New exploration tasks for future consideration:
+- Task 17: CMS system for blog
+- Task 18: Instagram hashtag feed embedding
+- Task 19: Geofenced check-in system (builds on Task #12)
 
 **Last Updated**: 2025-11-23
