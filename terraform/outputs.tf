@@ -278,3 +278,31 @@ output "ecs_deployment_instructions" {
     Note: The Django secret key has been automatically generated and stored in AWS Secrets Manager.
   EOT
 }
+# Wildcard Subdomain Outputs
+output "wildcard_certificate_arn" {
+  description = "ARN of the wildcard SSL certificate for *.popmap.co"
+  value       = aws_acm_certificate_validation.wildcard.certificate_arn
+}
+
+output "wildcard_certificate_status" {
+  description = "Wildcard certificate information"
+  value       = "Certificate for *.popmap.co - Check ACM console: https://console.aws.amazon.com/acm/home?region=us-east-1"
+}
+
+output "wildcard_subdomain_instructions" {
+  description = "Instructions for using wildcard subdomains"
+  value       = <<-EOT
+    Wildcard Subdomain Setup:
+    
+    1. Certificate: *.popmap.co is configured in CloudFront
+    2. DNS: All subdomains (*.popmap.co) route to CloudFront
+    3. Businesses can set custom_subdomain in Django admin
+    4. Example: mybusiness.popmap.co -> redirects to /p/123/
+    
+    To enable for a business:
+    - Business must be verified (is_verified=True)
+    - Owner must have active subscription with custom_subdomain_enabled
+    - Set custom_subdomain field (e.g., "mybusiness")
+    - Subdomain will be: mybusiness.popmap.co
+  EOT
+}
