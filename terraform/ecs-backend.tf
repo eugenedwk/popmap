@@ -354,11 +354,11 @@ resource "aws_ecs_task_definition" "backend" {
         },
         {
           name  = "ALLOWED_HOSTS"
-          value = "*"
+          value = "${var.domain_name},.${var.domain_name},api.${var.domain_name},localhost"
         },
         {
           name  = "CORS_ALLOWED_ORIGINS"
-          value = "https://${var.domain_name},https://www.${var.domain_name}"
+          value = "https://${var.domain_name},https://www.${var.domain_name},https://*.${var.domain_name}"
         },
         {
           name  = "CSRF_TRUSTED_ORIGINS"
