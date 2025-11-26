@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
-import { businessesApi, eventsApi } from '../services/api';
+import { businessesApi, eventsApi, formsApi } from '../services/api';
 import { useState } from 'react';
+import { FormRenderer } from './FormRenderer';
 import {
   Card,
   CardContent,
@@ -25,6 +26,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   Video,
+  FileText,
 } from 'lucide-react';
 import { formatPhoneNumber } from '@/lib/utils';
 import type { Event } from '../types';
@@ -59,6 +61,19 @@ function BusinessProfile() {
         ? response.data
         : response.data.results || [];
     },
+  });
+
+  // Fetch form templates for this business
+  const { data: formTemplates } = useQuery({
+    queryKey: ['form-templates', businessId],
+    queryFn: async () => {
+      const response = await formsApi.getTemplates();
+      // Filter to only templates for this business that are active
+      return response.data.filter(
+        (t) => t.business === businessId && t.is_active
+      );
+    },
+    enabled: !!businessId,
   });
 
   // Mutation for joining events
@@ -315,6 +330,21 @@ function BusinessProfile() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Contact Forms */}
+          {formTemplates && formTemplates.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className="h-5 w-5" />
+                <h2 className="text-xl font-semibold">Contact {business.name}</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {formTemplates.map((template) => (
+                  <FormRenderer key={template.id} template={template} />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Map of Upcoming Events */}
           {(presentEvents.length > 0 || futureEvents.length > 0) && (

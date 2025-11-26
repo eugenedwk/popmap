@@ -8,6 +8,7 @@ import {
   CalendarPlus,
   Building2,
   Briefcase,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -54,6 +55,15 @@ function Sidebar({ currentView, onViewChange }) {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const isBusinessOwner = isAuthenticated && user?.is_business_owner;
+
+  // Debug logging
+  console.log('Sidebar Auth Debug:', {
+    isAuthenticated,
+    user,
+    isBusinessOwner,
+    userRole: user?.role,
+    userProfile: user?.profile,
+  });
 
   return (
     <div className="w-16 md:w-64 bg-card border-r border-border h-full flex flex-col">
@@ -114,19 +124,28 @@ function Sidebar({ currentView, onViewChange }) {
               </h3>
               <ul className="space-y-2">
                 <li>
-                  <button
-                    onClick={() => navigate('/business')}
-                    className="w-full flex items-center md:items-start justify-center md:justify-start gap-3 px-3 md:px-4 py-3 rounded-lg transition-colors text-left hover:bg-accent hover:text-accent-foreground"
-                    title="My Business"
-                  >
-                    <Briefcase className="h-5 w-5 md:mt-0.5 flex-shrink-0" />
-                    <div className="hidden md:block flex-1 min-w-0">
-                      <div className="font-medium">My Business</div>
-                      <div className="text-xs text-muted-foreground">
-                        Manage your business
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => navigate('/business')}
+                      className="flex-1 flex items-center md:items-start justify-center md:justify-start gap-3 px-3 md:px-4 py-3 rounded-lg transition-colors text-left hover:bg-accent hover:text-accent-foreground"
+                      title="My Business"
+                    >
+                      <Briefcase className="h-5 w-5 md:mt-0.5 flex-shrink-0" />
+                      <div className="hidden md:block flex-1 min-w-0">
+                        <div className="font-medium">My Business</div>
+                        <div className="text-xs text-muted-foreground">
+                          Manage your business
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                    <button
+                      onClick={() => navigate('/submit-event')}
+                      className="hidden md:flex items-center justify-center h-10 w-10 rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                      title="Create New Event"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </button>
+                  </div>
                 </li>
               </ul>
             </div>
