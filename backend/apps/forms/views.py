@@ -35,7 +35,7 @@ class FormTemplateViewSet(viewsets.ModelViewSet):
         if user.is_authenticated and hasattr(user, 'profile'):
             if user.profile.is_business_owner:
                 # Return forms from businesses owned by user
-                businesses = user.owned_businesses.all()
+                businesses = user.businesses.all()
                 return FormTemplate.objects.filter(
                     business__in=businesses
                 ).prefetch_related('fields', 'fields__options').distinct()
@@ -182,7 +182,7 @@ class FormFieldViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Only show fields from forms owned by user
-        businesses = self.request.user.owned_businesses.all()
+        businesses = self.request.user.businesses.all()
         return FormField.objects.filter(
             form_template__business__in=businesses
         ).select_related('form_template').prefetch_related('options')
@@ -206,7 +206,7 @@ class FormSubmissionViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         # Only show submissions from forms owned by user
-        businesses = self.request.user.owned_businesses.all()
+        businesses = self.request.user.businesses.all()
         return FormSubmission.objects.filter(
             form_template__business__in=businesses
         ).select_related(

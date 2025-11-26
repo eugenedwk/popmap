@@ -61,7 +61,9 @@ export function BusinessDashboard() {
     queryKey: ['form-templates', businessId],
     queryFn: async () => {
       const response = await formsApi.getTemplates()
-      return response.data.filter(t => t.business === businessId)
+      // API returns paginated response with results array
+      const data = response.data.results || response.data
+      return data.filter((t: any) => t.business === businessId)
     },
     enabled: !!businessId
   })
@@ -303,7 +305,7 @@ export function BusinessDashboard() {
                           <h3 className="font-semibold">{template.name}</h3>
                           <p className="text-sm text-muted-foreground">{template.title}</p>
                           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                            <span>{template.fields.length} fields</span>
+                            <span>{template.field_count} fields</span>
                             <span>•</span>
                             <span>{template.submission_count} submissions</span>
                           </div>
