@@ -44,6 +44,7 @@ jobs:
           VITE_COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
           VITE_COGNITO_DOMAIN: ${{ secrets.COGNITO_DOMAIN }}
           VITE_APP_URL: https://popmap.co
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

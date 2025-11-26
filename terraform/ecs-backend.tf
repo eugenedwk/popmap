@@ -434,6 +434,18 @@ resource "aws_ecs_task_definition" "backend" {
         {
           name      = "EMAIL_HOST_PASSWORD"
           valueFrom = "${data.aws_secretsmanager_secret.ses_smtp.arn}:EMAIL_HOST_PASSWORD::"
+        },
+        {
+          name      = "STRIPE_SECRET_KEY"
+          valueFrom = "${data.aws_secretsmanager_secret.stripe.arn}:STRIPE_SECRET_KEY::"
+        },
+        {
+          name      = "STRIPE_PUBLISHABLE_KEY"
+          valueFrom = "${data.aws_secretsmanager_secret.stripe.arn}:STRIPE_PUBLISHABLE_KEY::"
+        },
+        {
+          name      = "STRIPE_WEBHOOK_SECRET"
+          valueFrom = "${data.aws_secretsmanager_secret.stripe.arn}:STRIPE_WEBHOOK_SECRET::"
         }
       ]
 
@@ -517,6 +529,13 @@ data "aws_secretsmanager_secret" "ses_smtp" {
   name = "popmap/prod/ses-smtp"
 }
 
+# ===== Secrets Manager for Stripe Credentials =====
+
+# Reference existing secret created manually
+data "aws_secretsmanager_secret" "stripe" {
+  name = "popmap/prod/stripe"
+}
+
 # Allow ECS task execution role to read secrets
 resource "aws_iam_role_policy" "ecs_secrets_access" {
   name = "${var.project_name}-ecs-secrets-policy"
@@ -533,7 +552,8 @@ resource "aws_iam_role_policy" "ecs_secrets_access" {
         Resource = [
           aws_secretsmanager_secret.django_secret_key.arn,
           aws_secretsmanager_secret.db_credentials.arn,
-          data.aws_secretsmanager_secret.ses_smtp.arn
+          data.aws_secretsmanager_secret.ses_smtp.arn,
+          data.aws_secretsmanager_secret.stripe.arn
         ]
       }
     ]
