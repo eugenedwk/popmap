@@ -9,10 +9,14 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Calendar, Clock, MapPin, Loader2, ArrowLeft, Heart, CheckCircle2, Users, ExternalLink } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { Calendar, Clock, MapPin, Loader2, ArrowLeft, Heart, CheckCircle2, Users, ExternalLink, Mail } from 'lucide-react'
 import { ShareButtons } from './ShareButtons'
 import { EventMetaTags } from './EventMetaTags'
 import { FormRenderer } from './FormRenderer'
+import type { GuestRSVPFormData } from '../types'
 
 function EventDetailPage() {
   const { eventId: eventIdParam } = useParams<{ eventId: string }>()
@@ -21,6 +25,14 @@ function EventDetailPage() {
   const queryClient = useQueryClient()
   const eventId = eventIdParam ? parseInt(eventIdParam, 10) : null
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+
+  // Guest RSVP form state
+  const [guestEmail, setGuestEmail] = useState('')
+  const [guestName, setGuestName] = useState('')
+  const [gdprConsent, setGdprConsent] = useState(false)
+  const [guestRsvpStatus, setGuestRsvpStatus] = useState<'interested' | 'going' | null>(null)
+  const [guestRsvpError, setGuestRsvpError] = useState<string | null>(null)
+  const [guestRsvpSuccess, setGuestRsvpSuccess] = useState(false)
 
   const { data: event, isLoading, error } = useQuery({
     queryKey: ['event', eventId],
@@ -65,6 +77,40 @@ function EventDetailPage() {
     },
   })
 
+  // Guest RSVP mutation
+  const guestRsvpMutation = useMutation({
+    mutationFn: (data: GuestRSVPFormData) => {
+      if (!eventId) throw new Error('Event ID is required')
+      return eventsApi.guestRsvp(eventId, data)
+    },
+    onSuccess: () => {
+      setGuestRsvpSuccess(true)
+      setGuestRsvpError(null)
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] })
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.error || 'Failed to submit RSVP. Please try again.'
+      setGuestRsvpError(errorMessage)
+      // If user exists, suggest login
+      if (error.response?.data?.user_exists) {
+        setShowLoginPrompt(true)
+      }
+    },
+  })
+
+  // Cancel guest RSVP mutation
+  const cancelGuestRsvpMutation = useMutation({
+    mutationFn: (email: string) => {
+      if (!eventId) throw new Error('Event ID is required')
+      return eventsApi.cancelGuestRsvp(eventId, email)
+    },
+    onSuccess: () => {
+      setGuestRsvpSuccess(false)
+      setGuestRsvpStatus(null)
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] })
+    },
+  })
+
   const handleRsvp = (status: 'interested' | 'going') => {
     if (!isAuthenticated) {
       setShowLoginPrompt(true)
@@ -76,6 +122,34 @@ function EventDetailPage() {
   const handleCancelRsvp = () => {
     if (!isAuthenticated) return
     cancelRsvpMutation.mutate()
+  }
+
+  const handleGuestRsvp = (status: 'interested' | 'going') => {
+    setGuestRsvpError(null)
+
+    if (!guestEmail) {
+      setGuestRsvpError('Please enter your email address.')
+      return
+    }
+
+    if (!gdprConsent) {
+      setGuestRsvpError('Please consent to data processing to RSVP.')
+      return
+    }
+
+    guestRsvpMutation.mutate({
+      guest_email: guestEmail,
+      guest_name: guestName,
+      status,
+      gdpr_consent: gdprConsent,
+    })
+    setGuestRsvpStatus(status)
+  }
+
+  const handleCancelGuestRsvp = () => {
+    if (guestEmail) {
+      cancelGuestRsvpMutation.mutate(guestEmail)
+    }
   }
 
   function formatDate(dateString: string): string {
@@ -268,7 +342,8 @@ function EventDetailPage() {
 
                   {/* RSVP Section */}
                   <div className="space-y-4">
-                    {showLoginPrompt && (
+                    {/* Login prompt for events requiring login */}
+                    {showLoginPrompt && event.require_login_for_rsvp && (
                       <Alert>
                         <AlertDescription>
                           Please{' '}
@@ -283,8 +358,24 @@ function EventDetailPage() {
                       </Alert>
                     )}
 
-                    {/* RSVP Section - Hidden until accounts are implemented */}
-                    {false && (
+                    {/* Login suggestion for guest who has account */}
+                    {showLoginPrompt && !event.require_login_for_rsvp && (
+                      <Alert>
+                        <AlertDescription>
+                          An account with this email already exists.{' '}
+                          <button
+                            onClick={() => navigate('/login')}
+                            className="underline font-medium hover:text-primary"
+                          >
+                            Sign in
+                          </button>{' '}
+                          to RSVP.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Authenticated User RSVP */}
+                    {isAuthenticated && (
                       <div>
                         <p className="font-medium mb-3">Interested in this event?</p>
                         <div className="flex flex-wrap gap-2">
@@ -331,8 +422,135 @@ function EventDetailPage() {
                       </div>
                     )}
 
-                    {/* RSVP Counts - Hidden until accounts are implemented */}
-                    {false && event.rsvp_counts && (event.rsvp_counts.interested > 0 || event.rsvp_counts.going > 0) && (
+                    {/* Guest RSVP - Only show if event allows it and user not authenticated */}
+                    {!isAuthenticated && !event.require_login_for_rsvp && (
+                      <div className="space-y-4">
+                        <p className="font-medium">RSVP to this event</p>
+
+                        {guestRsvpSuccess ? (
+                          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                              <CheckCircle2 className="h-5 w-5 text-green-600" />
+                              <p className="font-medium text-green-900">You're {guestRsvpStatus}!</p>
+                            </div>
+                            <p className="text-sm text-green-800 mb-3">
+                              We'll send event updates to {guestEmail}
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelGuestRsvp}
+                              disabled={cancelGuestRsvpMutation.isPending}
+                            >
+                              Cancel RSVP
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            {guestRsvpError && (
+                              <Alert variant="destructive">
+                                <AlertDescription>{guestRsvpError}</AlertDescription>
+                              </Alert>
+                            )}
+
+                            <div className="space-y-3">
+                              <div>
+                                <Label htmlFor="guest-email">Email *</Label>
+                                <div className="relative mt-1">
+                                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    id="guest-email"
+                                    type="email"
+                                    placeholder="your@email.com"
+                                    value={guestEmail}
+                                    onChange={(e) => setGuestEmail(e.target.value)}
+                                    className="pl-9"
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <Label htmlFor="guest-name">Name (optional)</Label>
+                                <Input
+                                  id="guest-name"
+                                  type="text"
+                                  placeholder="Your name"
+                                  value={guestName}
+                                  onChange={(e) => setGuestName(e.target.value)}
+                                  className="mt-1"
+                                />
+                              </div>
+
+                              {/* TODO: GDPR - Link to privacy policy */}
+                              <div className="flex items-start space-x-2">
+                                <Checkbox
+                                  id="gdpr-consent"
+                                  checked={gdprConsent}
+                                  onCheckedChange={(checked) => setGdprConsent(checked === true)}
+                                />
+                                <Label
+                                  htmlFor="gdpr-consent"
+                                  className="text-sm text-muted-foreground leading-tight"
+                                >
+                                  I consent to having my email stored to receive event updates
+                                </Label>
+                              </div>
+
+                              <div className="flex flex-wrap gap-2 pt-2">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => handleGuestRsvp('interested')}
+                                  disabled={guestRsvpMutation.isPending}
+                                >
+                                  {guestRsvpMutation.isPending && guestRsvpStatus === 'interested' && (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  )}
+                                  <Heart className="h-4 w-4 mr-2" />
+                                  Interested
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => handleGuestRsvp('going')}
+                                  disabled={guestRsvpMutation.isPending}
+                                >
+                                  {guestRsvpMutation.isPending && guestRsvpStatus === 'going' && (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  )}
+                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                  Going
+                                </Button>
+                              </div>
+                            </div>
+
+                            <p className="text-xs text-muted-foreground">
+                              Have an account?{' '}
+                              <button
+                                onClick={() => navigate('/login')}
+                                className="underline hover:text-primary"
+                              >
+                                Sign in
+                              </button>
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Prompt to login for events requiring authentication */}
+                    {!isAuthenticated && event.require_login_for_rsvp && (
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="font-medium mb-2">Want to RSVP?</p>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Sign in to mark your interest in this event.
+                        </p>
+                        <Button onClick={() => navigate('/login')} variant="outline" size="sm">
+                          Sign in to RSVP
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* RSVP Counts */}
+                    {event.rsvp_counts && (event.rsvp_counts.interested > 0 || event.rsvp_counts.going > 0) && (
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         {event.rsvp_counts.going > 0 && (
                           <div className="flex items-center gap-1">

@@ -15,6 +15,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, CheckCircle2, XCircle, MapPin, Search, X } from 'lucide-react'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
@@ -24,6 +25,7 @@ const eventSchema = z.object({
   description: z.string().optional(),
   cta_button_text: z.string().max(50, 'Button text must be 50 characters or less').optional(),
   cta_button_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  require_login_for_rsvp: z.boolean().default(true),
   address: z.string().min(1, 'Address is required').max(500),
   latitude: z.string().regex(/^-?\d+\.?\d*$/, 'Invalid latitude'),
   longitude: z.string().regex(/^-?\d+\.?\d*$/, 'Invalid longitude'),
@@ -98,6 +100,7 @@ function EventFormContent() {
       description: '',
       cta_button_text: '',
       cta_button_url: '',
+      require_login_for_rsvp: true,
       address: '',
       latitude: '',
       longitude: '',
@@ -476,6 +479,29 @@ function EventFormContent() {
                       {selectedBusinesses.length === 0 && ' (select a business first)'}
                     </FormDescription>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="require_login_for_rsvp"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Require login to RSVP
+                      </FormLabel>
+                      <FormDescription>
+                        If unchecked, anyone can RSVP with just an email address (reduces friction for attendees)
+                      </FormDescription>
+                    </div>
                   </FormItem>
                 )}
               />

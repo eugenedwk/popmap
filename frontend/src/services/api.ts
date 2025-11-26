@@ -15,7 +15,10 @@ import type {
   FormField,
   FormSubmission,
   FormSubmissionRequest,
-  FormTemplateFormData
+  FormTemplateFormData,
+  GuestRSVPFormData,
+  GuestRSVPCheckResponse,
+  EventRSVP
 } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -28,11 +31,13 @@ const apiClient = axios.create({
 })
 
 // Add authentication token to all requests
+// Use ID token instead of access token to get custom attributes like user_role
 apiClient.interceptors.request.use(
   async (config) => {
     try {
       const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString();
+      // ID token contains custom attributes (custom:user_role), access token doesn't
+      const token = session.tokens?.idToken?.toString();
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -98,7 +103,10 @@ export const businessesApi = {
         formData.append(key, value as string)
       }
     })
-    return apiClient.post('/businesses/', formData)
+    // Let axios set the Content-Type header automatically (includes boundary for multipart)
+    return apiClient.post('/businesses/', formData, {
+      headers: { 'Content-Type': undefined }
+    })
   },
   update: (id: number, data: Partial<Business>): Promise<AxiosResponse<Business>> =>
     apiClient.patch(`/businesses/${id}/`, data),
@@ -122,7 +130,10 @@ export const eventsApi = {
         formData.append(key, value as string)
       }
     })
-    return apiClient.post('/events/', formData)
+    // Let axios set the Content-Type header automatically (includes boundary for multipart)
+    return apiClient.post('/events/', formData, {
+      headers: { 'Content-Type': undefined }
+    })
   },
   update: (id: number, data: Partial<EventFormData>): Promise<AxiosResponse<Event>> => {
     const formData = new FormData()
@@ -142,12 +153,21 @@ export const eventsApi = {
     apiClient.post(`/events/${eventId}/join/`, { business_id: businessId }),
   leaveEvent: (eventId: number, businessId: number): Promise<AxiosResponse<{ message: string; event_id: number; business_id: number }>> =>
     apiClient.post(`/events/${eventId}/leave/`, { business_id: businessId }),
-  rsvp: (eventId: number, status: 'interested' | 'going'): Promise<AxiosResponse<ApiResponse<any>>> =>
+  // Authenticated user RSVP
+  rsvp: (eventId: number, status: 'interested' | 'going'): Promise<AxiosResponse<ApiResponse<EventRSVP>>> =>
     apiClient.post(`/events/${eventId}/rsvp/`, { status }),
   cancelRsvp: (eventId: number): Promise<AxiosResponse<{ message: string }>> =>
     apiClient.delete(`/events/${eventId}/cancel_rsvp/`),
-  getMyRsvps: (): Promise<AxiosResponse<any[]>> =>
+  getMyRsvps: (): Promise<AxiosResponse<EventRSVP[]>> =>
     apiClient.get('/events/my_rsvps/'),
+
+  // Guest RSVP (no authentication required)
+  guestRsvp: (eventId: number, data: GuestRSVPFormData): Promise<AxiosResponse<ApiResponse<EventRSVP>>> =>
+    apiClient.post(`/events/${eventId}/guest_rsvp/`, data),
+  cancelGuestRsvp: (eventId: number, guestEmail: string): Promise<AxiosResponse<{ message: string }>> =>
+    apiClient.post(`/events/${eventId}/cancel_guest_rsvp/`, { guest_email: guestEmail }),
+  checkGuestRsvp: (eventId: number, email: string): Promise<AxiosResponse<GuestRSVPCheckResponse>> =>
+    apiClient.get(`/events/${eventId}/check_guest_rsvp/`, { params: { email } }),
 }
 
 export const billingApi = {

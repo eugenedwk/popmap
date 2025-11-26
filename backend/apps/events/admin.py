@@ -80,6 +80,10 @@ class EventAdmin(admin.ModelAdmin):
         ('Status', {
             'fields': ('status',)
         }),
+        ('RSVP Settings', {
+            'fields': ('require_login_for_rsvp',),
+            'description': 'Control who can RSVP to this event'
+        }),
         ('Metadata', {
             'fields': ('get_created_by_email', 'created_at', 'updated_at'),
             'classes': ('collapse',)
@@ -120,18 +124,44 @@ class EventAdmin(admin.ModelAdmin):
 
 @admin.register(EventRSVP)
 class EventRSVPAdmin(admin.ModelAdmin):
-    list_display = ['user', 'event', 'status', 'created_at', 'updated_at']
-    list_filter = ['status', 'created_at', 'event']
-    search_fields = ['user__username', 'user__email', 'event__title']
-    readonly_fields = ['created_at', 'updated_at']
+    list_display = ['get_rsvp_identifier', 'event', 'status', 'is_guest_rsvp', 'created_at', 'updated_at']
+    list_filter = ['status', 'created_at', 'event', ('user', admin.EmptyFieldListFilter)]
+    search_fields = ['user__username', 'user__email', 'guest_email', 'guest_name', 'event__title']
+    readonly_fields = ['created_at', 'updated_at', 'gdpr_consent_timestamp', 'is_guest_rsvp']
     raw_id_fields = ['user', 'event']
 
     fieldsets = (
         ('RSVP Information', {
-            'fields': ('user', 'event', 'status')
+            'fields': ('event', 'status')
+        }),
+        ('Registered User', {
+            'fields': ('user',),
+            'description': 'For registered user RSVPs'
+        }),
+        ('Guest Information', {
+            'fields': ('guest_email', 'guest_name'),
+            'description': 'For guest RSVPs (when user is not registered)'
+        }),
+        ('GDPR Consent', {
+            'fields': ('gdpr_consent', 'gdpr_consent_timestamp'),
+            'description': 'Required for guest RSVPs',
+            'classes': ('collapse',)
         }),
         ('Metadata', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
+
+    def get_rsvp_identifier(self, obj):
+        """Display user or guest email as identifier"""
+        if obj.user:
+            return f"{obj.user.username} ({obj.user.email})"
+        return f"{obj.guest_email} (guest)"
+    get_rsvp_identifier.short_description = 'RSVP By'
+
+    def is_guest_rsvp(self, obj):
+        """Display whether this is a guest RSVP"""
+        return obj.user is None
+    is_guest_rsvp.boolean = True
+    is_guest_rsvp.short_description = 'Guest?'

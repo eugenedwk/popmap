@@ -59,15 +59,58 @@ class BusinessMinimalSerializer(serializers.ModelSerializer):
 
 
 class EventRSVPSerializer(serializers.ModelSerializer):
-    """Serializer for EventRSVP model"""
-    user_email = serializers.EmailField(source='user.email', read_only=True)
-    user_name = serializers.CharField(source='user.username', read_only=True)
+    """Serializer for EventRSVP model - handles both registered and guest RSVPs"""
+    # For display purposes, show either user email or guest email
+    display_email = serializers.SerializerMethodField()
+    display_name = serializers.SerializerMethodField()
     event_title = serializers.CharField(source='event.title', read_only=True)
+    is_guest_rsvp = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = EventRSVP
-        fields = ['id', 'event', 'event_title', 'user', 'user_email', 'user_name', 'status', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+        fields = [
+            'id', 'event', 'event_title', 'user', 'display_email', 'display_name',
+            'guest_email', 'guest_name', 'is_guest_rsvp',
+            'status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'is_guest_rsvp']
+
+    def get_display_email(self, obj):
+        """Return email address (user email for registered, guest_email for guests)"""
+        return obj.display_email
+
+    def get_display_name(self, obj):
+        """Return display name (username for registered, guest_name for guests)"""
+        if obj.user:
+            return obj.user.username
+        return obj.guest_name or 'Guest'
+
+
+class GuestRSVPSerializer(serializers.ModelSerializer):
+    """Serializer for creating guest RSVPs (non-authenticated users)"""
+
+    class Meta:
+        model = EventRSVP
+        fields = ['id', 'event', 'guest_email', 'guest_name', 'gdpr_consent', 'status', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate(self, data):
+        """Validate guest RSVP data"""
+        if not data.get('guest_email'):
+            raise serializers.ValidationError({'guest_email': 'Email is required for guest RSVPs.'})
+        if not data.get('gdpr_consent'):
+            raise serializers.ValidationError({
+                'gdpr_consent': 'You must consent to data processing to RSVP.'
+            })
+        if data.get('status') not in ['interested', 'going']:
+            raise serializers.ValidationError({'status': 'Status must be either "interested" or "going".'})
+        return data
+
+    def create(self, validated_data):
+        """Create a guest RSVP with GDPR consent timestamp"""
+        from django.utils import timezone
+        validated_data['gdpr_consent_timestamp'] = timezone.now()
+        return super().create(validated_data)
 
 
 class EventSerializer(serializers.ModelSerializer):
@@ -90,6 +133,7 @@ class EventSerializer(serializers.ModelSerializer):
             'latitude', 'longitude',
             'start_datetime', 'end_datetime',
             'image', 'cta_button_text', 'cta_button_url',
+            'require_login_for_rsvp',
             'status', 'created_at', 'updated_at',
             'user_rsvp_status', 'rsvp_counts'
         ]

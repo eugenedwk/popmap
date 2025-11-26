@@ -46,6 +46,7 @@ export interface Event {
   image?: string
   cta_button_text?: string
   cta_button_url?: string
+  require_login_for_rsvp: boolean
   status: 'pending' | 'approved' | 'rejected' | 'cancelled'
   created_at: string
   updated_at: string
@@ -64,12 +65,29 @@ export interface EventRSVP {
   id: number
   event: number
   event_title: string
-  user: number
-  user_email: string
-  user_name: string
+  user?: number | null
+  display_email: string
+  display_name: string
+  guest_email?: string | null
+  guest_name?: string
+  is_guest_rsvp: boolean
   status: 'interested' | 'going'
   created_at: string
   updated_at: string
+}
+
+// Guest RSVP form data
+export interface GuestRSVPFormData {
+  guest_email: string
+  guest_name?: string
+  status: 'interested' | 'going'
+  gdpr_consent: boolean
+}
+
+// Guest RSVP check response
+export interface GuestRSVPCheckResponse {
+  has_rsvp: boolean
+  status: 'interested' | 'going' | null
 }
 
 // Form data types
@@ -91,6 +109,7 @@ export interface EventFormData {
   description: string
   cta_button_text?: string
   cta_button_url?: string
+  require_login_for_rsvp?: boolean
   address: string
   latitude: string
   longitude: string

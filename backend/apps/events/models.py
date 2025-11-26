@@ -175,6 +175,12 @@ class Event(models.Model):
         help_text="Optional form for this event"
     )
 
+    # RSVP Settings
+    require_login_for_rsvp = models.BooleanField(
+        default=True,
+        help_text="If checked, only registered users can RSVP. If unchecked, anyone can RSVP with an email."
+    )
+
     # Status and moderation
     status = models.CharField(
         max_length=20,
@@ -219,6 +225,7 @@ class EventRSVP(models.Model):
     """
     Represents a user's RSVP to an event.
     Users can mark themselves as 'interested' or 'going'.
+    Supports both registered users and guest RSVPs (with email only).
     """
     RSVP_STATUS_CHOICES = [
         ('interested', 'Interested'),
@@ -231,11 +238,40 @@ class EventRSVP(models.Model):
         related_name='rsvps',
         help_text="The event the user is RSVPing to"
     )
+    # Registered user (nullable for guest RSVPs)
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='event_rsvps',
-        help_text="The user making the RSVP"
+        help_text="The registered user making the RSVP (null for guest RSVPs)"
+    )
+    # Guest RSVP fields
+    guest_email = models.EmailField(
+        blank=True,
+        null=True,
+        help_text="Email for guest RSVPs (when user is not logged in)"
+    )
+    guest_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Optional name for guest RSVPs"
+    )
+    # GDPR consent fields
+    # TODO: GDPR Compliance - Implement full consent management:
+    # - Link to privacy policy in consent text
+    # - Implement data export endpoint for guest RSVPs
+    # - Implement deletion endpoint for guests (via email verification)
+    # - Add consent withdrawal mechanism
+    gdpr_consent = models.BooleanField(
+        default=False,
+        help_text="Whether the guest has consented to data processing"
+    )
+    gdpr_consent_timestamp = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp when GDPR consent was given"
     )
     status = models.CharField(
         max_length=20,
@@ -246,14 +282,58 @@ class EventRSVP(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ['event', 'user']
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['event', 'status']),
             models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['guest_email']),
         ]
         verbose_name = "Event RSVP"
         verbose_name_plural = "Event RSVPs"
+        # Custom constraints to prevent duplicate RSVPs
+        constraints = [
+            # Unique constraint for registered users
+            models.UniqueConstraint(
+                fields=['event', 'user'],
+                condition=models.Q(user__isnull=False),
+                name='unique_event_user_rsvp'
+            ),
+            # Unique constraint for guest RSVPs by email
+            models.UniqueConstraint(
+                fields=['event', 'guest_email'],
+                condition=models.Q(guest_email__isnull=False),
+                name='unique_event_guest_email_rsvp'
+            ),
+        ]
+
+    def clean(self):
+        """Validate that either user or guest_email is provided, but not both."""
+        from django.core.exceptions import ValidationError
+
+        if self.user and self.guest_email:
+            raise ValidationError("Cannot have both user and guest_email. Use one or the other.")
+        if not self.user and not self.guest_email:
+            raise ValidationError("Either user or guest_email must be provided.")
+        if self.guest_email and not self.gdpr_consent:
+            raise ValidationError("GDPR consent is required for guest RSVPs.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user.username} - {self.event.title} ({self.get_status_display()})"
+        if self.user:
+            return f"{self.user.username} - {self.event.title} ({self.get_status_display()})"
+        return f"{self.guest_email} (guest) - {self.event.title} ({self.get_status_display()})"
+
+    @property
+    def is_guest_rsvp(self):
+        """Check if this is a guest RSVP (no user account)."""
+        return self.user is None
+
+    @property
+    def display_email(self):
+        """Get the email for this RSVP (user email or guest email)."""
+        if self.user:
+            return self.user.email
+        return self.guest_email

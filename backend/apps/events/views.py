@@ -12,13 +12,15 @@ from .serializers import (
     EventSerializer,
     EventListSerializer,
     CategorySerializer,
-    EventRSVPSerializer
+    EventRSVPSerializer,
+    GuestRSVPSerializer
 )
 from .permissions import (
     IsBusinessOwnerOrReadOnly,
     IsEventCreatorOrReadOnly,
     CanCreateEvent
 )
+from rest_framework.permissions import AllowAny
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -280,7 +282,7 @@ class EventViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def rsvp(self, request, pk=None):
         """
-        Create or update an RSVP for an event.
+        Create or update an RSVP for an event (authenticated users).
         Body: { "status": "interested" | "going" }
         """
         event = self.get_object()
@@ -292,10 +294,11 @@ class EventViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Create or update RSVP
+        # Create or update RSVP for authenticated user
         rsvp, created = EventRSVP.objects.update_or_create(
             event=event,
             user=request.user,
+            guest_email__isnull=True,  # Ensure we're matching user RSVPs, not guest
             defaults={'status': rsvp_status}
         )
 
@@ -310,9 +313,91 @@ class EventViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
 
+    @action(detail=True, methods=['post'], permission_classes=[AllowAny])
+    def guest_rsvp(self, request, pk=None):
+        """
+        Create or update an RSVP for an event (guest users without account).
+        Requires: { "status": "interested" | "going", "guest_email": "...", "gdpr_consent": true }
+        Optional: { "guest_name": "..." }
+        """
+        event = self.get_object()
+
+        # Check if event allows guest RSVPs
+        if event.require_login_for_rsvp:
+            return Response(
+                {'error': 'This event requires you to be logged in to RSVP.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        rsvp_status = request.data.get('status')
+        guest_email = request.data.get('guest_email')
+        guest_name = request.data.get('guest_name', '')
+        gdpr_consent = request.data.get('gdpr_consent', False)
+
+        # Validate required fields
+        if not rsvp_status or rsvp_status not in ['interested', 'going']:
+            return Response(
+                {'error': 'status is required and must be either "interested" or "going"'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not guest_email:
+            return Response(
+                {'error': 'guest_email is required for guest RSVPs'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not gdpr_consent:
+            return Response(
+                {'error': 'You must consent to data processing to RSVP. Please check the consent box.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if a user with this email exists
+        # If so, prompt them to log in instead
+        from django.contrib.auth.models import User
+        if User.objects.filter(email=guest_email).exists():
+            return Response(
+                {
+                    'error': 'An account with this email already exists. Please log in to RSVP.',
+                    'user_exists': True
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create or update guest RSVP
+        try:
+            rsvp, created = EventRSVP.objects.update_or_create(
+                event=event,
+                guest_email=guest_email,
+                user__isnull=True,  # Ensure we're matching guest RSVPs, not user
+                defaults={
+                    'status': rsvp_status,
+                    'guest_name': guest_name,
+                    'gdpr_consent': gdpr_consent,
+                    'gdpr_consent_timestamp': timezone.now() if gdpr_consent else None
+                }
+            )
+
+            serializer = EventRSVPSerializer(rsvp)
+            message = 'RSVP created successfully' if created else 'RSVP updated successfully'
+
+            return Response(
+                {
+                    'message': message,
+                    'data': serializer.data
+                },
+                status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
     @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
     def cancel_rsvp(self, request, pk=None):
-        """Cancel/delete an RSVP for an event"""
+        """Cancel/delete an RSVP for an event (authenticated users)"""
         event = self.get_object()
 
         try:
@@ -328,9 +413,65 @@ class EventViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+    @action(detail=True, methods=['post'], permission_classes=[AllowAny])
+    def cancel_guest_rsvp(self, request, pk=None):
+        """
+        Cancel/delete a guest RSVP for an event.
+        Body: { "guest_email": "..." }
+        TODO: GDPR Compliance - Consider email verification before deletion
+        """
+        event = self.get_object()
+        guest_email = request.data.get('guest_email')
+
+        if not guest_email:
+            return Response(
+                {'error': 'guest_email is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            rsvp = EventRSVP.objects.get(event=event, guest_email=guest_email, user__isnull=True)
+            rsvp.delete()
+            return Response(
+                {'message': 'RSVP cancelled successfully'},
+                status=status.HTTP_200_OK
+            )
+        except EventRSVP.DoesNotExist:
+            return Response(
+                {'error': 'No RSVP found for this email'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def my_rsvps(self, request):
         """Get all RSVPs for the authenticated user"""
         rsvps = EventRSVP.objects.filter(user=request.user).select_related('event').order_by('-created_at')
         serializer = EventRSVPSerializer(rsvps, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], permission_classes=[AllowAny])
+    def check_guest_rsvp(self, request, pk=None):
+        """
+        Check if a guest email has already RSVP'd to this event.
+        Query param: ?email=guest@example.com
+        """
+        event = self.get_object()
+        guest_email = request.query_params.get('email')
+
+        if not guest_email:
+            return Response(
+                {'error': 'email query parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            rsvp = EventRSVP.objects.get(event=event, guest_email=guest_email, user__isnull=True)
+            return Response({
+                'has_rsvp': True,
+                'status': rsvp.status
+            })
+        except EventRSVP.DoesNotExist:
+            return Response({
+                'has_rsvp': False,
+                'status': None
+            })
