@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { businessesApi, formsApi, eventsApi } from '../services/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -24,10 +24,14 @@ import { format } from 'date-fns'
  */
 export function BusinessDashboard() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { businessId: businessIdParam } = useParams<{ businessId: string }>()
   const businessId = businessIdParam ? parseInt(businessIdParam, 10) : null
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showEditProfile, setShowEditProfile] = useState(false)
+
+  // Get tab from query params (default to 'events')
+  const defaultTab = searchParams.get('tab') || 'events'
 
   const { data: business, isLoading, error } = useQuery({
     queryKey: ['business', businessId],
@@ -150,7 +154,7 @@ export function BusinessDashboard() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="events" className="space-y-6">
+        <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 lg:w-auto">
             <TabsTrigger value="events" className="gap-2">
               <Calendar className="h-4 w-4" />

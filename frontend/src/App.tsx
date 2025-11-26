@@ -20,6 +20,7 @@ import { BusinessDashboard } from './components/BusinessDashboard';
 import { BusinessOwnerHub } from './components/BusinessOwnerHub';
 import { FormTemplateBuilder } from './components/FormTemplateBuilder';
 import { FormSubmissionsList } from './components/FormSubmissionsList';
+import { BusinessAccountDropdown } from './components/BusinessAccountDropdown';
 import { useAuth } from './contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
@@ -126,20 +127,24 @@ function AppContent() {
 
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
-              <>
-                <div className="flex items-center gap-2 mr-2">
-                  <User className="h-4 w-4" />
-                  <span className="text-sm hidden sm:inline">{user?.first_name || user?.email}</span>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => signOut().then(() => navigate('/'))}
-                >
-                  <LogOut className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Sign Out</span>
-                </Button>
-              </>
+              user?.is_business_owner ? (
+                <BusinessAccountDropdown />
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 mr-2">
+                    <User className="h-4 w-4" />
+                    <span className="text-sm hidden sm:inline">{user?.first_name || user?.email}</span>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => signOut().then(() => navigate('/'))}
+                  >
+                    <LogOut className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Sign Out</span>
+                  </Button>
+                </>
+              )
             ) : (
               <>
                 <Button
@@ -173,7 +178,7 @@ function AppContent() {
           {/* Form Builder Routes - Full screen, no sidebar, scrollable */}
           <Route path="/forms/:templateId/submissions" element={<div className="flex-1 overflow-auto"><FormSubmissionsList /></div>} />
           <Route path="/business/:businessId/dashboard" element={<div className="flex-1 overflow-auto"><BusinessDashboard /></div>} />
-          <Route path="/my-businesses" element={<div className="flex-1 overflow-auto"><BusinessOwnerHub /></div>} />
+          <Route path="/business" element={<div className="flex-1 overflow-auto"><BusinessOwnerHub /></div>} />
 
           {/* Regular Routes - With sidebar (hidden on mobile) */}
           <Route
