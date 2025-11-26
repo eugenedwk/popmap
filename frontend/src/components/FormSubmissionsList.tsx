@@ -1,23 +1,32 @@
 import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { formsApi } from '@/services/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { FormSubmission } from '@/types'
 
 interface Props {
-  templateId: number
+  templateId?: number
 }
 
-export function FormSubmissionsList({ templateId }: Props) {
+export function FormSubmissionsList({ templateId: propTemplateId }: Props) {
+  const { templateId: paramTemplateId } = useParams<{ templateId: string }>()
+  const templateId = propTemplateId ?? (paramTemplateId ? parseInt(paramTemplateId, 10) : undefined)
   const [submissions, setSubmissions] = useState<FormSubmission[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadSubmissions()
+    if (templateId) {
+      loadSubmissions()
+    } else {
+      setLoading(false)
+      setError('No form template specified')
+    }
   }, [templateId])
 
   const loadSubmissions = async () => {
+    if (!templateId) return
     try {
       setLoading(true)
       const response = await formsApi.getSubmissions(templateId)

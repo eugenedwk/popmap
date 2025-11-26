@@ -43,7 +43,7 @@ function MobileNavigation({ currentView, onViewChange }: MobileNavigationProps) 
 }
 
 MobileNavigation.propTypes = {
-  currentView: PropTypes.oneOf(['list', 'cards', 'map', 'brands']).isRequired,
+  currentView: PropTypes.string.isRequired,
   onViewChange: PropTypes.func.isRequired,
 }
 
