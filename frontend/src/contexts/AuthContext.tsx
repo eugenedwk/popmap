@@ -150,7 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function getAccessToken(): Promise<string | null> {
     try {
       const session = await fetchAuthSession();
-      return session.tokens?.accessToken?.toString() || null;
+      // Use ID token to include custom attributes like user_role
+      return session.tokens?.idToken?.toString() || null;
     } catch (error) {
       console.error('Failed to get access token:', error);
       return null;
