@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { businessesApi, categoriesApi } from '../services/api'
-import type { Business } from '../types'
+import { businessesApi, categoriesApi, formsApi } from '../services/api'
+import type { Business, FormTemplate } from '../types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,7 +12,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, CheckCircle2, XCircle, Building2 } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Loader2, CheckCircle2, XCircle, Building2, FileText } from 'lucide-react'
+import { FormRenderer } from './FormRenderer'
 
 const businessSchema = z.object({
   name: z.string().min(1, 'Business name is required').max(255),
@@ -34,7 +37,29 @@ interface BusinessEditFormProps {
 
 export function BusinessEditForm({ business, onSuccess }: BusinessEditFormProps) {
   const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
+  const [selectedForm, setSelectedForm] = useState<FormTemplate | null>(null)
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const queryClient = useQueryClient()
+
+  // Fetch form templates for this business
+  const { data: formTemplates } = useQuery({
+    queryKey: ['form-templates', business.id],
+    queryFn: async () => {
+      const response = await formsApi.getTemplates()
+      // Filter to only templates for this business that are active
+      return response.data.filter(
+        (t) => t.business === business.id && t.is_active
+      )
+    },
+  })
+
+  const handleFormSelect = (formId: string) => {
+    const form = formTemplates?.find((f) => f.id.toString() === formId)
+    if (form) {
+      setSelectedForm(form)
+      setIsFormModalOpen(true)
+    }
+  }
 
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['categories'],
@@ -335,6 +360,31 @@ export function BusinessEditForm({ business, onSuccess }: BusinessEditFormProps)
               )}
             />
 
+            {/* CTA Forms Section */}
+            {formTemplates && formTemplates.length > 0 && (
+              <div className="rounded-md border p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Contact Forms</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Preview your business contact forms. These forms are displayed on your business profile page.
+                </p>
+                <Select onValueChange={handleFormSelect}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a form to preview..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formTemplates.map((template) => (
+                      <SelectItem key={template.id} value={template.id.toString()}>
+                        {template.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -349,6 +399,27 @@ export function BusinessEditForm({ business, onSuccess }: BusinessEditFormProps)
           </form>
         </Form>
       </CardContent>
+
+      {/* Form Preview Modal */}
+      <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Form Preview</DialogTitle>
+            <DialogDescription>
+              This is how your form will appear to visitors on your business profile page.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedForm && (
+            <FormRenderer
+              template={selectedForm}
+              onSubmitSuccess={() => {
+                setIsFormModalOpen(false)
+                setSelectedForm(null)
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

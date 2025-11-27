@@ -29,7 +29,7 @@ export function FormRenderer({ template, eventId, onSubmitSuccess }: Props) {
       setError(null)
 
       // Validate required fields
-      for (const field of template.fields) {
+      for (const field of template.fields || []) {
         if (field.is_required && !responses[field.id!]) {
           setError(`Please fill out: ${field.label}`)
           return
@@ -98,7 +98,7 @@ export function FormRenderer({ template, eventId, onSubmitSuccess }: Props) {
           </div>
 
           {/* Form fields */}
-          {template.fields.map((field) => (
+          {(template.fields || []).map((field) => (
             <div key={field.id}>
               <Label htmlFor={`field-${field.id}`}>
                 {field.label}
