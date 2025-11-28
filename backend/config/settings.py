@@ -149,12 +149,21 @@ CORS_ALLOWED_ORIGINS = config(
     cast=Csv()
 )
 
+# Allow all subdomains of popmap.co (for custom business subdomains)
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.popmap\.co$",  # Match any subdomain like tomo.popmap.co
+]
+
 # CSRF settings for production
+# Note: Django 4.0+ supports subdomain wildcards like 'https://*.popmap.co'
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
-    default='http://localhost:5173',
+    default='http://localhost:5173,https://*.popmap.co,https://popmap.co',
     cast=Csv()
 )
+
+# Set cookie domain to allow sharing across subdomains in production
+CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN', default=None)  # Set to '.popmap.co' in production
 
 # AWS Cognito Configuration
 AWS_COGNITO_USER_POOL_ID = config('AWS_COGNITO_USER_POOL_ID', default='')
