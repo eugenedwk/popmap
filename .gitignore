@@ -67,6 +67,12 @@ dist-ssr/
 *.tfstate
 *.tfstate.*
 terraform.tfvars
+tfplan*
+*.tfplan
+
+# Temporary files
+tmp/
+.tmp/
 
 # Misc
 .vercel
