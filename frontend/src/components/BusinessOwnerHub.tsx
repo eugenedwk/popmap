@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { businessesApi } from '../services/api'
+import { businessesApi, billingApi } from '../services/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Building2, Plus, Settings } from 'lucide-react'
+import { Loader2, Building2, Plus, Settings, Crown, Sparkles } from 'lucide-react'
 
 /**
  * Business Owner Hub - Landing page for business owners
@@ -22,6 +22,58 @@ export function BusinessOwnerHub() {
       return response.data
     },
   })
+
+  const { data: subscription } = useQuery({
+    queryKey: ['current-subscription'],
+    queryFn: async () => {
+      const response = await billingApi.getCurrentSubscription()
+      return response.data.subscription
+    },
+  })
+
+  const getSubscriptionBadge = () => {
+    if (!subscription || subscription.status !== 'active') {
+      return (
+        <Badge variant="secondary" className="gap-1">
+          <Sparkles className="h-3 w-3" />
+          Free
+        </Badge>
+      )
+    }
+
+    const planType = subscription.plan?.plan_type
+    if (planType === 'enterprise') {
+      return (
+        <Badge className="bg-purple-600 hover:bg-purple-700 gap-1">
+          <Crown className="h-3 w-3" />
+          Enterprise
+        </Badge>
+      )
+    }
+    if (planType === 'professional') {
+      return (
+        <Badge className="bg-amber-500 hover:bg-amber-600 gap-1">
+          <Crown className="h-3 w-3" />
+          Professional
+        </Badge>
+      )
+    }
+    if (planType === 'starter') {
+      return (
+        <Badge className="bg-blue-500 hover:bg-blue-600 gap-1">
+          <Sparkles className="h-3 w-3" />
+          Starter
+        </Badge>
+      )
+    }
+
+    return (
+      <Badge variant="secondary" className="gap-1">
+        <Sparkles className="h-3 w-3" />
+        Free
+      </Badge>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -83,17 +135,9 @@ export function BusinessOwnerHub() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {/* Status Badge */}
+                    {/* Subscription Status Badge */}
                     <div className="flex items-center gap-2">
-                      {business.is_verified ? (
-                        <Badge variant="default" className="bg-green-600">
-                          Verified
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">
-                          Pending Verification
-                        </Badge>
-                      )}
+                      {getSubscriptionBadge()}
                     </div>
 
                     {/* Categories */}

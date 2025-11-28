@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
-import { businessesApi, eventsApi, formsApi } from '../services/api';
+import { businessesApi, eventsApi } from '../services/api';
 import { useState } from 'react';
 import { FormRenderer } from './FormRenderer';
 import {
@@ -15,6 +15,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
   Calendar,
   Clock,
   MapPin,
@@ -27,8 +35,9 @@ import {
   CheckCircle2,
   Video,
   FileText,
+  MessageSquare,
 } from 'lucide-react';
-import { formatPhoneNumber } from '@/lib/utils';
+import { formatPhoneNumber, generatePrimaryColorVars } from '@/lib/utils';
 import type { Event } from '../types';
 import { BusinessEventsMap } from './BusinessEventsMap';
 
@@ -38,6 +47,7 @@ function BusinessProfile() {
   const queryClient = useQueryClient();
   const businessId = businessIdParam ? parseInt(businessIdParam, 10) : null;
   const [joiningEventId, setJoiningEventId] = useState<number | null>(null);
+  const [isContactFormOpen, setIsContactFormOpen] = useState(false);
   const {
     data: business,
     isLoading: businessLoading,
@@ -63,18 +73,6 @@ function BusinessProfile() {
     },
   });
 
-  // Fetch form templates for this business
-  const { data: formTemplates } = useQuery({
-    queryKey: ['form-templates', businessId],
-    queryFn: async () => {
-      const response = await formsApi.getTemplates();
-      // Filter to only templates for this business that are active
-      return response.data.filter(
-        (t) => t.business === businessId && t.is_active
-      );
-    },
-    enabled: !!businessId,
-  });
 
   // Mutation for joining events
   const joinEventMutation = useMutation({
@@ -186,6 +184,9 @@ function BusinessProfile() {
     return startDate > now;
   });
 
+  // Determine event order based on customization setting
+  const showUpcomingFirst = business.show_upcoming_events_first ?? true;
+
   // Filter available events (future events that the business is NOT part of)
   const availableEvents = (
     Array.isArray(allEvents)
@@ -211,9 +212,30 @@ function BusinessProfile() {
     }
   };
 
+  // Apply custom primary color if available (overrides theme colors)
+  const customStyle = business.custom_primary_color && business.can_use_premium_customization
+    ? generatePrimaryColorVars(business.custom_primary_color)
+    : undefined
+
   return (
-    <div className="h-full bg-background">
-      <ScrollArea className="h-full">
+    <div
+      className="h-full bg-background relative"
+      style={customStyle}
+    >
+      {/* Custom Background Image */}
+      {business.background_image_url && business.can_use_premium_customization && (
+        <div
+          className="absolute inset-0 z-0 opacity-10"
+          style={{
+            backgroundImage: `url(${business.background_image_url})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        />
+      )}
+
+      <ScrollArea className="h-full relative z-10">
         <div className="max-w-5xl mx-auto p-6">
           {/* Back Button */}
           <Button
@@ -244,7 +266,7 @@ function BusinessProfile() {
                 )}
                 <div className="flex-1">
                   <div className="flex items-start gap-3 mb-2">
-                    <h1 className="text-3xl font-bold">{business.name}</h1>
+                    <h1 className={`text-3xl font-bold ${customStyle ? 'text-primary' : ''}`}>{business.name}</h1>
                     {business.available_for_hire && (
                       <Badge
                         variant="default"
@@ -331,18 +353,32 @@ function BusinessProfile() {
             </CardContent>
           </Card>
 
-          {/* Contact Forms */}
-          {formTemplates && formTemplates.length > 0 && (
+          {/* Contact Form Button */}
+          {business.active_form_template && (
             <div className="mb-6">
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="h-5 w-5" />
-                <h2 className="text-xl font-semibold">Contact {business.name}</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {formTemplates.map((template) => (
-                  <FormRenderer key={template.id} template={template} />
-                ))}
-              </div>
+              <Dialog open={isContactFormOpen} onOpenChange={setIsContactFormOpen}>
+                <DialogTrigger asChild>
+                  <Button size="lg" className="gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    Contact {business.name}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" />
+                      Contact {business.name}
+                    </DialogTitle>
+                    <DialogDescription>
+                      Fill out the form below and we'll get back to you as soon as possible.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <FormRenderer
+                    template={business.active_form_template}
+                    onSubmitSuccess={() => setIsContactFormOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
           )}
 
@@ -439,7 +475,7 @@ function BusinessProfile() {
             {presentEvents.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-2xl font-bold">Happening Now</h2>
+                  <h2 className={`text-2xl font-bold ${customStyle ? 'text-primary' : ''}`}>Happening Now</h2>
                   <Badge variant="default" className="bg-green-600">
                     {presentEvents.length}
                   </Badge>
@@ -517,7 +553,7 @@ function BusinessProfile() {
                 {presentEvents.length > 0 && <Separator className="my-8" />}
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <h2 className="text-2xl font-bold">Upcoming Events</h2>
+                    <h2 className={`text-2xl font-bold ${customStyle ? 'text-primary' : ''}`}>Upcoming Events</h2>
                     <Badge variant="outline">{futureEvents.length}</Badge>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -596,7 +632,7 @@ function BusinessProfile() {
                 )}
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <h2 className="text-2xl font-bold">Past Events</h2>
+                    <h2 className={`text-2xl font-bold ${customStyle ? 'text-primary' : ''}`}>Past Events</h2>
                     <Badge variant="outline">{pastEvents.length}</Badge>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

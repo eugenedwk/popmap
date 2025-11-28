@@ -21,6 +21,7 @@ import { BusinessOwnerHub } from './components/BusinessOwnerHub';
 import { FormTemplateBuilder } from './components/FormTemplateBuilder';
 import { FormSubmissionsList } from './components/FormSubmissionsList';
 import { BusinessAccountDropdown } from './components/BusinessAccountDropdown';
+import { BillingPage } from './components/BillingPage';
 import { useAuth } from './contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
@@ -179,6 +180,7 @@ function AppContent() {
           <Route path="/forms/:templateId/submissions" element={<div className="flex-1 overflow-auto"><FormSubmissionsList /></div>} />
           <Route path="/business/:businessId/dashboard" element={<div className="flex-1 overflow-auto"><BusinessDashboard /></div>} />
           <Route path="/business" element={<div className="flex-1 overflow-auto"><BusinessOwnerHub /></div>} />
+          <Route path="/billing" element={<div className="flex-1 overflow-auto"><BillingPage /></div>} />
 
           {/* Regular Routes - With sidebar (hidden on mobile) */}
           <Route

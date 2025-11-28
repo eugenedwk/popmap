@@ -11,6 +11,8 @@ import { Loader2, Plus, FileText, Eye, Calendar, Edit, Building2, Settings } fro
 import { BusinessSubdomainSettings } from './BusinessSubdomainSettings'
 import { BusinessEditForm } from './BusinessEditForm'
 import { FormTemplateBuilder } from './FormTemplateBuilder'
+import { BusinessPageSettings } from './BusinessPageSettings'
+import { FormBuilderPaywall } from './FormBuilderPaywall'
 import { format } from 'date-fns'
 
 /**
@@ -262,78 +264,81 @@ export function BusinessDashboard() {
 
           {/* Forms Tab */}
           <TabsContent value="forms">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle>Form Templates</CardTitle>
-                    <CardDescription>
-                      Create and manage forms for collecting information from your customers
-                    </CardDescription>
-                  </div>
-                  <Button onClick={() => setShowCreateForm(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Form
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {templatesLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : !templates || templates.length === 0 ? (
-                  <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-lg font-medium text-muted-foreground">No forms yet</p>
-                    <p className="text-sm text-muted-foreground mt-1 mb-4">
-                      Create your first form to start collecting submissions
-                    </p>
+            <FormBuilderPaywall canUseFormBuilder={business.can_use_form_builder}>
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle>Form Templates</CardTitle>
+                      <CardDescription>
+                        Create and manage forms for collecting information from your customers
+                      </CardDescription>
+                    </div>
                     <Button onClick={() => setShowCreateForm(true)}>
                       <Plus className="h-4 w-4 mr-2" />
-                      Create Your First Form
+                      Create Form
                     </Button>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {templates.map((template) => (
-                      <div
-                        key={template.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <h3 className="font-semibold">{template.name}</h3>
-                          <p className="text-sm text-muted-foreground">{template.title}</p>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                            <span>{template.field_count} fields</span>
-                            <span>•</span>
-                            <span>{template.submission_count} submissions</span>
+                </CardHeader>
+                <CardContent>
+                  {templatesLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : !templates || templates.length === 0 ? (
+                    <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                      <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                      <p className="text-lg font-medium text-muted-foreground">No forms yet</p>
+                      <p className="text-sm text-muted-foreground mt-1 mb-4">
+                        Create your first form to start collecting submissions
+                      </p>
+                      <Button onClick={() => setShowCreateForm(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Your First Form
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {templates.map((template) => (
+                        <div
+                          key={template.id}
+                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex-1">
+                            <h3 className="font-semibold">{template.name}</h3>
+                            <p className="text-sm text-muted-foreground">{template.title}</p>
+                            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                              <span>{template.field_count} fields</span>
+                              <span>•</span>
+                              <span>{template.submission_count} submissions</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/forms/${template.id}/submissions`)}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Submissions
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/forms/${template.id}/submissions`)}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Submissions
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </FormBuilderPaywall>
           </TabsContent>
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
+            {/* Page Customization Settings (Premium) */}
+            <BusinessPageSettings business={business} />
+
             {/* Custom Subdomain Settings */}
             <BusinessSubdomainSettings business={business} />
-
-            {/* Additional settings can be added here */}
           </TabsContent>
         </Tabs>
       </div>
