@@ -12,6 +12,21 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'slug']
 
 
+class ActiveFormTemplateField(serializers.PrimaryKeyRelatedField):
+    def get_queryset(self):
+        # Import here to avoid circular imports
+        from apps.forms.models import FormTemplate
+        request = self.context.get('request', None)
+        if hasattr(self, 'parent') and hasattr(self.parent, 'instance') and self.parent.instance:
+            # When updating, only allow templates for this business
+            return FormTemplate.objects.filter(
+                business=self.parent.instance,
+                is_active=True
+            )
+        # For creation or when no instance, return all (will be filtered later)
+        return FormTemplate.objects.filter(is_active=True)
+
+
 class BusinessSerializer(serializers.ModelSerializer):
     categories = CategorySerializer(many=True, read_only=True)
     category_ids = serializers.PrimaryKeyRelatedField(
@@ -22,7 +37,16 @@ class BusinessSerializer(serializers.ModelSerializer):
         required=False
     )
     can_use_custom_subdomain = serializers.BooleanField(read_only=True)
+    can_use_premium_customization = serializers.BooleanField(read_only=True)
+    can_use_form_builder = serializers.BooleanField(read_only=True)
     subdomain_url = serializers.SerializerMethodField()
+    active_form_template_id = ActiveFormTemplateField(
+        source='active_form_template',
+        required=False,
+        allow_null=True,
+        write_only=True
+    )
+    active_form_template = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Business
@@ -31,9 +55,20 @@ class BusinessSerializer(serializers.ModelSerializer):
             'website', 'instagram_url', 'tiktok_url', 'available_for_hire',
             'logo', 'categories', 'category_ids', 'custom_subdomain',
             'can_use_custom_subdomain', 'subdomain_url',
-            'is_verified', 'created_at'
+            'active_form_template', 'active_form_template_id',
+            'background_image_url', 'default_view_mode', 'custom_primary_color',
+            'show_upcoming_events_first', 'can_use_premium_customization',
+            'can_use_form_builder', 'is_verified', 'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'is_verified']
+
+
+    def get_active_form_template(self, obj):
+        """Return the full active form template if available"""
+        if obj.active_form_template:
+            from apps.forms.serializers import FormTemplateSerializer
+            return FormTemplateSerializer(obj.active_form_template).data
+        return None
 
     def get_subdomain_url(self, obj):
         """Return the subdomain URL if available"""
@@ -47,6 +82,23 @@ class BusinessSerializer(serializers.ModelSerializer):
                 "Please upgrade to use this feature."
             )
         return value
+
+    def validate(self, attrs):
+        """Validate premium features require subscription"""
+        if self.instance:
+            # Check if premium customization fields are being modified
+            premium_fields = ['background_image_url', 'custom_primary_color', 'default_view_mode', 'show_upcoming_events_first']
+            is_modifying_premium = any(
+                field in attrs and attrs.get(field) != getattr(self.instance, field)
+                for field in premium_fields
+            )
+
+            if is_modifying_premium and not self.instance.can_use_premium_customization():
+                raise serializers.ValidationError(
+                    "Premium customization features require an active subscription. Please upgrade to use these features."
+                )
+
+        return attrs
 
 
 class BusinessMinimalSerializer(serializers.ModelSerializer):

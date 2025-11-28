@@ -20,7 +20,15 @@ export interface Business {
   categories: Category[]
   custom_subdomain?: string | null
   can_use_custom_subdomain: boolean
+  can_use_premium_customization: boolean
+  can_use_form_builder: boolean
   subdomain_url?: string | null
+  active_form_template?: FormTemplate | null
+  active_form_template_id?: number | null
+  background_image_url?: string
+  default_view_mode?: 'map' | 'list' | 'card'
+  custom_primary_color?: string
+  show_upcoming_events_first?: boolean
   is_verified: boolean
   created_at: string
 }

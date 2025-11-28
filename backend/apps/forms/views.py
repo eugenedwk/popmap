@@ -45,12 +45,29 @@ class FormTemplateViewSet(viewsets.ModelViewSet):
             is_active=True
         ).prefetch_related('fields', 'fields__options')
 
+    def perform_update(self, serializer):
+        # Check if business has an active subscription for form builder
+        form_template = self.get_object()
+        if not form_template.business.can_use_form_builder():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(
+                "Form builder requires an active subscription. Please upgrade to edit forms."
+            )
+        serializer.save()
+
     def perform_create(self, serializer):
         # Ensure user owns the business
         business = serializer.validated_data['business']
         if business.owner != self.request.user:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("You don't own this business")
+
+        # Check if business has an active subscription for form builder
+        if not business.can_use_form_builder():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(
+                "Form builder requires an active subscription. Please upgrade to create forms."
+            )
 
         serializer.save(created_by=self.request.user)
 

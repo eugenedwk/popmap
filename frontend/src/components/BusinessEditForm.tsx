@@ -14,8 +14,10 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Loader2, CheckCircle2, XCircle, Building2, FileText } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Loader2, CheckCircle2, XCircle, Building2, FileText, Crown, AlertTriangle } from 'lucide-react'
 import { FormRenderer } from './FormRenderer'
+import { BusinessPageSettings } from './BusinessPageSettings'
 
 const businessSchema = z.object({
   name: z.string().min(1, 'Business name is required').max(255),
@@ -27,6 +29,7 @@ const businessSchema = z.object({
   tiktok_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   available_for_hire: z.boolean().default(false),
   category_ids: z.array(z.number()).optional(),
+  active_form_template_id: z.number().nullable().optional(),
   logo: z.any().optional(),
 })
 
@@ -53,13 +56,6 @@ export function BusinessEditForm({ business, onSuccess }: BusinessEditFormProps)
     },
   })
 
-  const handleFormSelect = (formId: string) => {
-    const form = formTemplates?.find((f) => f.id.toString() === formId)
-    if (form) {
-      setSelectedForm(form)
-      setIsFormModalOpen(true)
-    }
-  }
 
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['categories'],
@@ -96,6 +92,7 @@ export function BusinessEditForm({ business, onSuccess }: BusinessEditFormProps)
       tiktok_url: business.tiktok_url || '',
       available_for_hire: business.available_for_hire || false,
       category_ids: business.categories.map(c => c.id),
+      active_form_template_id: business.active_form_template?.id || null,
     },
   })
 
@@ -360,29 +357,71 @@ export function BusinessEditForm({ business, onSuccess }: BusinessEditFormProps)
               )}
             />
 
-            {/* CTA Forms Section */}
+            {/* Form Builder Premium Notice */}
+            {!business.can_use_form_builder && (
+              <Alert className="border-amber-200 bg-amber-50">
+                <Crown className="h-4 w-4 text-amber-600" />
+                <AlertDescription>
+                  <strong className="font-semibold">Premium Feature:</strong> The Form Builder requires an active subscription.
+                  <a href="/billing" className="underline ml-1 text-amber-700 hover:text-amber-800">
+                    Upgrade now
+                  </a> to create custom contact forms for your business.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Active Form Selection */}
             {formTemplates && formTemplates.length > 0 && (
-              <div className="rounded-md border p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Contact Forms</span>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Preview your business contact forms. These forms are displayed on your business profile page.
-                </p>
-                <Select onValueChange={handleFormSelect}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a form to preview..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formTemplates.map((template) => (
-                      <SelectItem key={template.id} value={template.id.toString()}>
-                        {template.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <FormField
+                control={form.control}
+                name="active_form_template_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Active Contact Form</FormLabel>
+                    <div className="flex gap-2">
+                      <Select
+                        value={field.value?.toString() || ''}
+                        onValueChange={(value) => field.onChange(value === 'none' ? null : Number(value))}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select a form to display on your profile..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">No form (disable contact form)</SelectItem>
+                          {formTemplates.map((template) => (
+                            <SelectItem key={template.id} value={template.id.toString()}>
+                              {template.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {field.value && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const form = formTemplates.find((f) => f.id === field.value)
+                            if (form) {
+                              setSelectedForm(form)
+                              setIsFormModalOpen(true)
+                            }
+                          }}
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          Preview
+                        </Button>
+                      )}
+                    </div>
+                    <FormDescription>
+                      Choose which contact form to display on your business profile. Only one form can be active at a time.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
 
             <div className="flex gap-3">

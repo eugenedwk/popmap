@@ -69,6 +69,41 @@ class Business(models.Model):
         help_text="Custom subdomain for this business (e.g., 'mybusiness' for mybusiness.popmap.co)"
     )
 
+    # Active form template to display on profile
+    active_form_template = models.ForeignKey(
+        'forms.FormTemplate',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='active_for_businesses',
+        help_text="The form template to display on the business profile page"
+    )
+
+    # Premium customization options (requires active subscription)
+    background_image_url = models.URLField(
+        blank=True,
+        help_text="URL for custom background image (premium feature)"
+    )
+    default_view_mode = models.CharField(
+        max_length=20,
+        choices=[
+            ('map', 'Map View'),
+            ('list', 'List View'),
+            ('card', 'Card View')
+        ],
+        default='card',
+        help_text="Default view mode for business page (premium feature)"
+    )
+    custom_primary_color = models.CharField(
+        max_length=7,
+        blank=True,
+        help_text="Custom primary color in hex format, e.g., #FF5733 (premium feature)"
+    )
+    show_upcoming_events_first = models.BooleanField(
+        default=True,
+        help_text="Show upcoming events before past events (premium feature)"
+    )
+
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -106,6 +141,32 @@ class Business(models.Model):
         if self.custom_subdomain:
             return f"https://{self.custom_subdomain}.popmap.co"
         return None
+
+    def can_use_premium_customization(self):
+        """
+        Check if business owner has an active subscription that allows premium customization.
+        """
+        if not self.owner:
+            return False
+
+        try:
+            from apps.billing.models import Subscription
+            # Check for active subscription
+            subscription = Subscription.objects.filter(
+                user=self.owner,
+                status__in=['active', 'trialing']
+            ).first()
+            return subscription is not None
+        except ImportError:
+            # If billing app is not installed, return False
+            return False
+
+    def can_use_form_builder(self):
+        """
+        Check if business owner has an active subscription that allows form builder.
+        Same as premium customization for now - any active subscription grants access.
+        """
+        return self.can_use_premium_customization()
 
 
 class Event(models.Model):
