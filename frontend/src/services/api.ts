@@ -90,6 +90,7 @@ export const categoriesApi = {
 export const businessesApi = {
   getAll: (): Promise<AxiosResponse<Business[]>> => apiClient.get('/businesses/'),
   getById: (id: number): Promise<AxiosResponse<Business>> => apiClient.get(`/businesses/${id}/`),
+  getBySubdomain: (subdomain: string): Promise<AxiosResponse<Business>> => apiClient.get(`/businesses/by-subdomain/${subdomain}/`),
   getMyBusinesses: (): Promise<AxiosResponse<Business[]>> => apiClient.get('/businesses/my_businesses/'),
   create: (data: BusinessFormData): Promise<AxiosResponse<ApiResponse<Business>>> => {
     const formData = new FormData()

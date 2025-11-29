@@ -22,6 +22,7 @@ import { FormTemplateBuilder } from './components/FormTemplateBuilder';
 import { FormSubmissionsList } from './components/FormSubmissionsList';
 import { BusinessAccountDropdown } from './components/BusinessAccountDropdown';
 import { BillingPage } from './components/BillingPage';
+import { SubdomainRedirect } from './components/SubdomainRedirect';
 import { useAuth } from './contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
@@ -107,8 +108,9 @@ function AppContent() {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      <header className="bg-primary text-primary-foreground p-4 shadow-lg">
+    <SubdomainRedirect>
+      <div className="h-screen flex flex-col">
+        <header className="bg-primary text-primary-foreground p-4 shadow-lg">
         <div className="flex items-center justify-between gap-4">
           <button
             onClick={() => {
@@ -283,7 +285,8 @@ function AppContent() {
           />
         </Routes>
       </main>
-    </div>
+      </div>
+    </SubdomainRedirect>
   );
 }
 
