@@ -176,6 +176,9 @@ class EventSerializer(serializers.ModelSerializer):
     )
     user_rsvp_status = serializers.SerializerMethodField()
     rsvp_counts = serializers.SerializerMethodField()
+    # Recurring event fields (write-only, handled in view)
+    is_recurring = serializers.BooleanField(write_only=True, required=False, default=False)
+    recurrence_count = serializers.IntegerField(write_only=True, required=False, default=1)
 
     class Meta:
         model = Event
@@ -187,7 +190,8 @@ class EventSerializer(serializers.ModelSerializer):
             'image', 'cta_button_text', 'cta_button_url',
             'require_login_for_rsvp',
             'status', 'created_at', 'updated_at',
-            'user_rsvp_status', 'rsvp_counts'
+            'user_rsvp_status', 'rsvp_counts',
+            'is_recurring', 'recurrence_count'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -222,6 +226,10 @@ class EventSerializer(serializers.ModelSerializer):
         Create an event with automatic geocoding if lat/long not provided.
         If latitude/longitude are not provided or are empty, attempt to geocode the address.
         """
+        # Pop recurring fields - they are handled in the view, not stored on the model
+        validated_data.pop('is_recurring', None)
+        validated_data.pop('recurrence_count', None)
+
         latitude = validated_data.get('latitude')
         longitude = validated_data.get('longitude')
         address = validated_data.get('address')

@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from django.utils import timezone
 from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend
+from datetime import timedelta
 
 from .models import Business, Event, Category, EventRSVP
 from .serializers import (
@@ -145,12 +146,61 @@ class EventViewSet(viewsets.ModelViewSet):
         )
 
     def create(self, request, *args, **kwargs):
-        """Create a new event (pending approval by default)"""
+        """Create a new event (pending approval by default). Handles recurring events."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # Event will be created with status='pending' and created_by set to current user
+
+        # Extract recurring event info before creation
+        is_recurring = request.data.get('is_recurring', False)
+        recurrence_count = int(request.data.get('recurrence_count', 1))
+
+        # Create the first event
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
+        first_event = serializer.instance
+        created_events = [serializer.data]
+
+        # If recurring, create additional events
+        if is_recurring and recurrence_count > 1:
+            # Get the businesses to associate with recurring events
+            business_ids = request.data.get('business_ids', [])
+
+            for week_offset in range(1, recurrence_count):
+                # Create new event data with offset dates
+                new_start = first_event.start_datetime + timedelta(weeks=week_offset)
+                new_end = first_event.end_datetime + timedelta(weeks=week_offset)
+
+                recurring_event = Event.objects.create(
+                    title=first_event.title,
+                    description=first_event.description,
+                    address=first_event.address,
+                    latitude=first_event.latitude,
+                    longitude=first_event.longitude,
+                    start_datetime=new_start,
+                    end_datetime=new_end,
+                    image=first_event.image,
+                    cta_button_text=first_event.cta_button_text,
+                    cta_button_url=first_event.cta_button_url,
+                    require_login_for_rsvp=first_event.require_login_for_rsvp,
+                    form_template=first_event.form_template,
+                    status='pending',
+                    created_by=request.user,
+                )
+                # Add businesses to the recurring event
+                if business_ids:
+                    recurring_event.businesses.set(business_ids)
+                created_events.append(EventSerializer(recurring_event, context={'request': request}).data)
+
+            return Response(
+                {
+                    'message': f'{recurrence_count} recurring events submitted successfully! They will be reviewed by our team.',
+                    'data': created_events,
+                    'events_created': recurrence_count
+                },
+                status=status.HTTP_201_CREATED,
+                headers=headers
+            )
+
         return Response(
             {
                 'message': 'Event submitted successfully! Your event will be reviewed by our team.',

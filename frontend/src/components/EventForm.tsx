@@ -29,18 +29,20 @@ const eventSchema = z.object({
   address: z.string().min(1, 'Address is required').max(500),
   latitude: z.string().regex(/^-?\d+\.?\d*$/, 'Invalid latitude'),
   longitude: z.string().regex(/^-?\d+\.?\d*$/, 'Invalid longitude'),
-  start_datetime: z.string().min(1, 'Start date and time is required'),
-  end_datetime: z.string().min(1, 'End date and time is required'),
+  event_date: z.string().min(1, 'Event date is required'),
+  start_time: z.string().min(1, 'Start time is required'),
+  end_time: z.string().min(1, 'End time is required'),
+  is_recurring: z.boolean().default(false),
+  recurrence_count: z.string().optional(),
   business_ids: z.array(z.number()).min(1, 'Select at least one business'),
   form_template: z.number().optional(),
   image: z.any().optional(),
 }).refine((data) => {
-  const start = new Date(data.start_datetime)
-  const end = new Date(data.end_datetime)
-  return end > start
+  // Validate end time is after start time
+  return data.end_time > data.start_time
 }, {
-  message: 'End date must be after start date',
-  path: ['end_datetime'],
+  message: 'End time must be after start time',
+  path: ['end_time'],
 }).refine((data) => {
   // If button text is provided, URL must be provided and vice versa
   const hasText = data.cta_button_text && data.cta_button_text.trim() !== ''
@@ -49,6 +51,15 @@ const eventSchema = z.object({
 }, {
   message: 'Both button text and URL are required if you want to add a call-to-action button',
   path: ['cta_button_url'],
+}).refine((data) => {
+  // If recurring, must select recurrence count
+  if (data.is_recurring && (!data.recurrence_count || data.recurrence_count === '1')) {
+    return false
+  }
+  return true
+}, {
+  message: 'Please select how many times the event repeats',
+  path: ['recurrence_count'],
 })
 
 function EventFormContent() {
@@ -104,12 +115,18 @@ function EventFormContent() {
       address: '',
       latitude: '',
       longitude: '',
-      start_datetime: '',
-      end_datetime: '',
+      event_date: '',
+      start_time: '',
+      end_time: '',
+      is_recurring: false,
+      recurrence_count: '1',
       business_ids: [],
       form_template: undefined,
     },
   })
+
+  // Watch the is_recurring field to show/hide recurrence options
+  const isRecurring = form.watch('is_recurring')
 
   // Handle place selection from autocomplete
   const handlePlaceSelect = (place) => {
@@ -125,12 +142,28 @@ function EventFormContent() {
 
   const onSubmit = (data) => {
     setSubmitStatus(null)
+
+    // Combine date and time into datetime strings
+    const start_datetime = `${data.event_date}T${data.start_time}`
+    const end_datetime = `${data.event_date}T${data.end_time}`
+
     const formData = {
-      ...data,
+      title: data.title,
+      description: data.description,
+      cta_button_text: data.cta_button_text,
+      cta_button_url: data.cta_button_url,
+      require_login_for_rsvp: data.require_login_for_rsvp,
+      address: data.address,
       image: data.image?.[0], // Get first file if exists
       latitude: parseFloat(data.latitude),
       longitude: parseFloat(data.longitude),
+      start_datetime,
+      end_datetime,
+      business_ids: data.business_ids,
       form_template: data.form_template || null, // Convert undefined to null
+      // Include recurrence info for backend to create multiple events
+      is_recurring: data.is_recurring,
+      recurrence_count: data.is_recurring ? parseInt(data.recurrence_count || '1') : 1,
     }
     mutation.mutate(formData)
   }
@@ -414,15 +447,29 @@ function EventFormContent() {
               <input type="hidden" {...form.register('latitude')} />
               <input type="hidden" {...form.register('longitude')} />
 
+              <FormField
+                control={form.control}
+                name="event_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event Date *</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="start_datetime"
+                  name="start_time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Start Date & Time *</FormLabel>
+                      <FormLabel>Start Time *</FormLabel>
                       <FormControl>
-                        <Input type="datetime-local" {...field} />
+                        <Input type="time" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -431,18 +478,75 @@ function EventFormContent() {
 
                 <FormField
                   control={form.control}
-                  name="end_datetime"
+                  name="end_time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>End Date & Time *</FormLabel>
+                      <FormLabel>End Time *</FormLabel>
                       <FormControl>
-                        <Input type="datetime-local" {...field} />
+                        <Input type="time" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="is_recurring"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Recurring event
+                      </FormLabel>
+                      <FormDescription>
+                        Check this if the event repeats weekly
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {isRecurring && (
+                <FormField
+                  control={form.control}
+                  name="recurrence_count"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Repeat for how many weeks? *</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select number of weeks" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="2">2 weeks</SelectItem>
+                          <SelectItem value="3">3 weeks</SelectItem>
+                          <SelectItem value="4">4 weeks</SelectItem>
+                          <SelectItem value="6">6 weeks</SelectItem>
+                          <SelectItem value="8">8 weeks</SelectItem>
+                          <SelectItem value="12">12 weeks</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        This will create {field.value || '...'} separate events, one for each week
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}
