@@ -4,9 +4,24 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Send, ArrowRight, Check, Sparkles, Mail, MessageSquare } from 'lucide-react'
 import type { FormTemplate, FormSubmissionRequest } from '@/types'
+
+// Icon mapping for button customization
+const getIconComponent = (iconName: string) => {
+  const iconMap: Record<string, React.ReactNode> = {
+    'Send': <Send className="h-4 w-4" />,
+    'ArrowRight': <ArrowRight className="h-4 w-4" />,
+    'Check': <Check className="h-4 w-4" />,
+    'Sparkles': <Sparkles className="h-4 w-4" />,
+    'Mail': <Mail className="h-4 w-4" />,
+    'MessageSquare': <MessageSquare className="h-4 w-4" />,
+  }
+  return iconMap[iconName] || null
+}
 
 interface Props {
   template: FormTemplate
@@ -115,6 +130,17 @@ export function FormRenderer({ template, eventId, onSubmitSuccess }: Props) {
                 />
               )}
 
+              {field.field_type === 'phone' && (
+                <Input
+                  id={`field-${field.id}`}
+                  type="tel"
+                  value={responses[field.id!] || ''}
+                  onChange={(e) => setResponses({ ...responses, [field.id!]: e.target.value })}
+                  placeholder={field.placeholder || '(555) 123-4567'}
+                  required={field.is_required}
+                />
+              )}
+
               {field.field_type === 'dropdown' && (
                 <Select
                   value={responses[field.id!] || ''}
@@ -134,6 +160,23 @@ export function FormRenderer({ template, eventId, onSubmitSuccess }: Props) {
                 </Select>
               )}
 
+              {field.field_type === 'radio' && (
+                <RadioGroup
+                  value={responses[field.id!] || ''}
+                  onValueChange={(value) => setResponses({ ...responses, [field.id!]: value })}
+                  className="mt-2"
+                >
+                  {field.options?.map((option) => (
+                    <div key={option.id} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.value} id={`field-${field.id}-${option.id}`} />
+                      <Label htmlFor={`field-${field.id}-${option.id}`} className="font-normal cursor-pointer">
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              )}
+
               {field.help_text && (
                 <p className="text-sm text-gray-500 mt-1">{field.help_text}</p>
               )}
@@ -141,7 +184,16 @@ export function FormRenderer({ template, eventId, onSubmitSuccess }: Props) {
           ))}
 
           <Button type="submit" disabled={submitting} className="w-full">
-            {submitting ? 'Submitting...' : 'Submit'}
+            {submitting ? (
+              'Submitting...'
+            ) : (
+              <>
+                {template.submit_button_icon && getIconComponent(template.submit_button_icon)}
+                <span className={template.submit_button_icon ? 'ml-2' : ''}>
+                  {template.submit_button_text || 'Submit'}
+                </span>
+              </>
+            )}
           </Button>
         </form>
       </CardContent>

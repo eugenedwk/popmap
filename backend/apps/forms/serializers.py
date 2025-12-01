@@ -37,8 +37,8 @@ class FormFieldCreateSerializer(serializers.ModelSerializer):
         options_data = validated_data.pop('options', [])
         field = FormField.objects.create(**validated_data)
 
-        # Create options if this is a dropdown
-        if field.field_type == 'dropdown':
+        # Create options if this is a dropdown or radio field
+        if field.field_type in ['dropdown', 'radio']:
             for option_data in options_data:
                 FormFieldOption.objects.create(field=field, **option_data)
 
@@ -52,8 +52,8 @@ class FormFieldCreateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
 
-        # Update options if provided
-        if options_data is not None and instance.field_type == 'dropdown':
+        # Update options if provided for dropdown or radio fields
+        if options_data is not None and instance.field_type in ['dropdown', 'radio']:
             # Delete existing options
             instance.options.all().delete()
             # Create new options
@@ -97,6 +97,7 @@ class FormTemplateSerializer(serializers.ModelSerializer):
             'id', 'business', 'business_name', 'name', 'title',
             'description', 'notification_email',
             'send_confirmation_to_submitter', 'confirmation_message',
+            'submit_button_text', 'submit_button_icon',
             'is_active', 'created_at', 'updated_at', 'fields',
             'submission_count'
         ]

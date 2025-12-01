@@ -199,7 +199,7 @@ export interface FormFieldOption {
 export interface FormField {
   id?: number
   form_template?: number
-  field_type: 'text' | 'dropdown'
+  field_type: 'text' | 'dropdown' | 'phone' | 'radio'
   label: string
   placeholder?: string
   help_text?: string
@@ -218,6 +218,8 @@ export interface FormTemplate {
   notification_email: string
   send_confirmation_to_submitter: boolean
   confirmation_message?: string
+  submit_button_text?: string
+  submit_button_icon?: string
   is_active: boolean
   created_at: string
   updated_at: string
@@ -266,4 +268,6 @@ export interface FormTemplateFormData {
   notification_email: string
   send_confirmation_to_submitter: boolean
   confirmation_message?: string
+  submit_button_text?: string
+  submit_button_icon?: string
 }

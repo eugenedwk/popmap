@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Plus, Trash2, GripVertical } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Send, ArrowRight, Check, Sparkles, Mail, MessageSquare } from 'lucide-react'
 import type { FormField, FormFieldOption, FormTemplateFormData } from '@/types'
 
 interface Props {
@@ -28,8 +28,33 @@ export function FormTemplateBuilder({ businessId, onSave }: Props) {
     description: '',
     notification_email: user?.email || '',
     send_confirmation_to_submitter: false,
-    confirmation_message: ''
+    confirmation_message: '',
+    submit_button_text: 'Submit',
+    submit_button_icon: ''
   })
+
+  // Available icons for button customization
+  const buttonIcons = [
+    { value: '', label: 'No Icon' },
+    { value: 'Send', label: 'Send' },
+    { value: 'ArrowRight', label: 'Arrow Right' },
+    { value: 'Check', label: 'Check' },
+    { value: 'Sparkles', label: 'Sparkles' },
+    { value: 'Mail', label: 'Mail' },
+    { value: 'MessageSquare', label: 'Message' },
+  ]
+
+  const getIconComponent = (iconName: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      'Send': <Send className="h-4 w-4" />,
+      'ArrowRight': <ArrowRight className="h-4 w-4" />,
+      'Check': <Check className="h-4 w-4" />,
+      'Sparkles': <Sparkles className="h-4 w-4" />,
+      'Mail': <Mail className="h-4 w-4" />,
+      'MessageSquare': <MessageSquare className="h-4 w-4" />,
+    }
+    return iconMap[iconName] || null
+  }
 
   const [fields, setFields] = useState<Partial<FormField>[]>([])
   const [saving, setSaving] = useState(false)
@@ -101,6 +126,10 @@ export function FormTemplateBuilder({ businessId, onSave }: Props) {
         }
         if (field.field_type === 'dropdown' && (!field.options || field.options.length === 0)) {
           setError(`Dropdown field "${field.label}" must have at least one option`)
+          return
+        }
+        if (field.field_type === 'radio' && (!field.options || field.options.length < 2)) {
+          setError(`Radio field "${field.label}" must have at least two options`)
           return
         }
       }
@@ -223,6 +252,59 @@ export function FormTemplateBuilder({ businessId, onSave }: Props) {
             )}
           </div>
 
+          {/* Button Customization */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Submit Button</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="submit_button_text">Button Text</Label>
+                <Input
+                  id="submit_button_text"
+                  value={formData.submit_button_text}
+                  onChange={(e) => setFormData({ ...formData, submit_button_text: e.target.value })}
+                  placeholder="Submit"
+                  maxLength={50}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="submit_button_icon">Button Icon</Label>
+                <Select
+                  value={formData.submit_button_icon || ''}
+                  onValueChange={(value) => setFormData({ ...formData, submit_button_icon: value })}
+                >
+                  <SelectTrigger id="submit_button_icon">
+                    <SelectValue placeholder="Select an icon" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {buttonIcons.map((icon) => (
+                      <SelectItem key={icon.value} value={icon.value}>
+                        <span className="flex items-center gap-2">
+                          {icon.value && getIconComponent(icon.value)}
+                          {icon.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Button Preview */}
+            <div>
+              <Label>Preview</Label>
+              <div className="mt-2">
+                <Button disabled className="pointer-events-none">
+                  {formData.submit_button_icon && getIconComponent(formData.submit_button_icon)}
+                  <span className={formData.submit_button_icon ? 'ml-2' : ''}>
+                    {formData.submit_button_text || 'Submit'}
+                  </span>
+                </Button>
+              </div>
+            </div>
+          </div>
+
           {/* Form Fields */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -244,14 +326,16 @@ export function FormTemplateBuilder({ businessId, onSave }: Props) {
                           <Label>Field Type</Label>
                           <Select
                             value={field.field_type}
-                            onValueChange={(value) => updateField(index, { field_type: value as 'text' | 'dropdown' })}
+                            onValueChange={(value) => updateField(index, { field_type: value as 'text' | 'dropdown' | 'phone' | 'radio' })}
                           >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="text">Text Input</SelectItem>
+                              <SelectItem value="phone">Phone Number</SelectItem>
                               <SelectItem value="dropdown">Dropdown</SelectItem>
+                              <SelectItem value="radio">Radio Selection</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -266,18 +350,18 @@ export function FormTemplateBuilder({ businessId, onSave }: Props) {
                         </div>
                       </div>
 
-                      {field.field_type === 'text' && (
+                      {(field.field_type === 'text' || field.field_type === 'phone') && (
                         <div>
                           <Label>Placeholder</Label>
                           <Input
                             value={field.placeholder}
                             onChange={(e) => updateField(index, { placeholder: e.target.value })}
-                            placeholder="Placeholder text"
+                            placeholder={field.field_type === 'phone' ? 'e.g., (555) 123-4567' : 'Placeholder text'}
                           />
                         </div>
                       )}
 
-                      {field.field_type === 'dropdown' && (
+                      {(field.field_type === 'dropdown' || field.field_type === 'radio') && (
                         <div className="space-y-2">
                           <Label>Options *</Label>
                           {field.options?.map((option, optIndex) => (

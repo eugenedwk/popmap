@@ -50,6 +50,18 @@ class FormTemplate(models.Model):
         help_text="Custom message in confirmation email"
     )
 
+    # Button Customization
+    submit_button_text = models.CharField(
+        max_length=50,
+        default='Submit',
+        help_text="Custom text for the submit button"
+    )
+    submit_button_icon = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Icon name (e.g., 'Send', 'ArrowRight', 'Check')"
+    )
+
     # Status
     is_active = models.BooleanField(
         default=True,
@@ -77,6 +89,8 @@ class FormField(models.Model):
     FIELD_TYPE_CHOICES = [
         ('text', 'Text Input'),
         ('dropdown', 'Dropdown'),
+        ('phone', 'Phone Number'),
+        ('radio', 'Radio Selection'),
     ]
 
     form_template = models.ForeignKey(
@@ -130,13 +144,13 @@ class FormField(models.Model):
 
 class FormFieldOption(models.Model):
     """
-    Represents options for dropdown fields.
+    Represents options for dropdown and radio fields.
     """
     field = models.ForeignKey(
         FormField,
         on_delete=models.CASCADE,
         related_name='options',
-        limit_choices_to={'field_type': 'dropdown'}
+        limit_choices_to={'field_type__in': ['dropdown', 'radio']}
     )
 
     label = models.CharField(
