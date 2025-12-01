@@ -2,35 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { businessesApi } from '../services/api'
 import { Loader2 } from 'lucide-react'
-
-/**
- * Extracts subdomain from the current hostname
- * Returns null if on main domain or reserved subdomains
- */
-function getSubdomain(): string | null {
-  const host = window.location.hostname
-
-  // Main domains that don't have subdomains
-  const mainDomains = ['popmap.co', 'localhost', '127.0.0.1']
-
-  // Reserved subdomains that shouldn't trigger business lookup
-  const reservedSubdomains = ['www', 'api', 'admin', 'app']
-
-  for (const domain of mainDomains) {
-    if (host === domain) {
-      return null // Main domain, no subdomain
-    }
-    if (host.endsWith(`.${domain}`)) {
-      const subdomain = host.replace(`.${domain}`, '')
-      if (reservedSubdomains.includes(subdomain)) {
-        return null // Reserved subdomain
-      }
-      return subdomain
-    }
-  }
-
-  return null
-}
+import { getSubdomain } from '@/lib/subdomain'
 
 interface SubdomainRedirectProps {
   children: React.ReactNode

@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '../contexts/AuthContext';
+import { isOnSubdomain, getMainSiteLink } from '@/lib/subdomain';
 
 const views = [
   { id: 'map', label: 'Map View', icon: Map, description: 'Interactive map' },
@@ -51,10 +52,19 @@ const submitOptions = [
   },
 ];
 
+// Map view IDs to URL paths
+const viewPaths: Record<string, string> = {
+  'map': '/',
+  'list': '/list',
+  'cards': '/cards',
+  'brands': '/brands',
+};
+
 function Sidebar({ currentView, onViewChange }) {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const isBusinessOwner = isAuthenticated && user?.is_business_owner;
+  const onSubdomain = isOnSubdomain();
 
   // Debug logging
   console.log('Sidebar Auth Debug:', {
@@ -64,6 +74,16 @@ function Sidebar({ currentView, onViewChange }) {
     userRole: user?.role,
     userProfile: user?.profile,
   });
+
+  // Handle view change - use external links on subdomain
+  const handleViewClick = (viewId: string) => {
+    if (onSubdomain) {
+      const path = viewPaths[viewId] || '/';
+      window.location.href = getMainSiteLink(path);
+    } else {
+      onViewChange(viewId);
+    }
+  };
 
   return (
     <div className="w-16 md:w-64 bg-card border-r border-border h-full flex flex-col">
@@ -84,7 +104,7 @@ function Sidebar({ currentView, onViewChange }) {
               return (
                 <li key={view.id}>
                   <button
-                    onClick={() => onViewChange(view.id)}
+                    onClick={() => handleViewClick(view.id)}
                     className={cn(
                       'w-full flex items-center md:items-start justify-center md:justify-start gap-3 px-3 md:px-4 py-3 rounded-lg transition-colors text-left',
                       currentView === view.id

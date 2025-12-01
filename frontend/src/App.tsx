@@ -27,6 +27,7 @@ import { useAuth } from './contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
 import { trackPageView, analytics } from './lib/analytics';
+import { isOnSubdomain, getMainSiteLink } from './lib/subdomain';
 import logo from './noun-cafe-4738717-007435.png';
 
 type ViewType =
@@ -112,21 +113,37 @@ function AppContent() {
       <div className="h-screen flex flex-col">
         <header className="bg-primary text-primary-foreground p-4 shadow-lg">
         <div className="flex items-center justify-between gap-4">
-          <button
-            onClick={() => {
-              analytics.trackHomeClick();
-              navigate('/');
-            }}
-            className="flex items-start gap-3 hover:opacity-80 transition-opacity"
-          >
-            <img src={logo} alt="PopMap Logo" className="h-10 w-10" />
-            <div>
-              <h1 className="text-2xl font-bold">PopMap</h1>
-              <p className="text-sm opacity-90">
-                Discover local popup events in the DMV region.
-              </p>
-            </div>
-          </button>
+          {isOnSubdomain() ? (
+            <a
+              href={getMainSiteLink('/')}
+              className="flex items-start gap-3 hover:opacity-80 transition-opacity"
+              onClick={() => analytics.trackHomeClick()}
+            >
+              <img src={logo} alt="PopMap Logo" className="h-10 w-10" />
+              <div>
+                <h1 className="text-2xl font-bold">PopMap</h1>
+                <p className="text-sm opacity-90">
+                  Discover local popup events in the DMV region.
+                </p>
+              </div>
+            </a>
+          ) : (
+            <button
+              onClick={() => {
+                analytics.trackHomeClick();
+                navigate('/');
+              }}
+              className="flex items-start gap-3 hover:opacity-80 transition-opacity"
+            >
+              <img src={logo} alt="PopMap Logo" className="h-10 w-10" />
+              <div>
+                <h1 className="text-2xl font-bold">PopMap</h1>
+                <p className="text-sm opacity-90">
+                  Discover local popup events in the DMV region.
+                </p>
+              </div>
+            </button>
+          )}
 
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
