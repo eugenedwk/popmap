@@ -11,6 +11,7 @@ class SubscriptionPlan(models.Model):
     """
     PLAN_TYPE_CHOICES = [
         ('free', 'Free'),
+        ('premium', 'Premium'),
         ('starter', 'Starter'),
         ('professional', 'Professional'),
         ('enterprise', 'Enterprise'),
