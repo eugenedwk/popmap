@@ -18,25 +18,31 @@ class CognitoAuthentication(authentication.BaseAuthentication):
         auth_header = request.headers.get('Authorization')
 
         if not auth_header or not auth_header.startswith('Bearer '):
+            logger.debug('No Authorization header or not Bearer token')
             return None
 
         token = auth_header.split(' ')[1]
+        logger.debug(f'Received token (first 50 chars): {token[:50]}...')
 
         try:
             # Verify and decode the JWT token
             payload = self.verify_token(token)
+            logger.debug(f'Token verified successfully. Sub: {payload.get("sub")}')
 
             # Get or create Django user from Cognito claims
             user = self.get_or_create_user(payload)
+            logger.debug(f'User retrieved/created: {user.username}')
 
             return (user, token)
 
         except jwt.ExpiredSignatureError:
+            logger.warning('Token has expired')
             raise exceptions.AuthenticationFailed('Token has expired')
         except jwt.InvalidTokenError as e:
+            logger.warning(f'Invalid token: {str(e)}')
             raise exceptions.AuthenticationFailed(f'Invalid token: {str(e)}')
         except Exception as e:
-            logger.error(f'Authentication failed: {str(e)}')
+            logger.error(f'Authentication failed: {str(e)}', exc_info=True)
             raise exceptions.AuthenticationFailed(f'Authentication failed: {str(e)}')
 
     def verify_token(self, token):
@@ -49,6 +55,7 @@ class CognitoAuthentication(authentication.BaseAuthentication):
             f'https://cognito-idp.{region}.amazonaws.com/'
             f'{user_pool_id}/.well-known/jwks.json'
         )
+        logger.debug(f'JWKS URL: {jwks_url}')
 
         jwks_client = PyJWKClient(jwks_url)
         signing_key = jwks_client.get_signing_key_from_jwt(token)
@@ -63,16 +70,20 @@ class CognitoAuthentication(authentication.BaseAuthentication):
             options={'verify_exp': True, 'verify_aud': False}
         )
 
+        logger.debug(f'Token claims: iss={payload.get("iss")}, aud={payload.get("aud")}, client_id={payload.get("client_id")}, token_use={payload.get("token_use")}')
+
         # Verify the token is for our app
         # Access tokens have client_id, ID tokens have aud
         token_client_id = payload.get('client_id') or payload.get('aud')
+        logger.debug(f'Token client_id: {token_client_id}, expected: {app_client_id}')
+
         if token_client_id != app_client_id:
-            raise jwt.InvalidTokenError('Token is not for this application')
+            raise jwt.InvalidTokenError(f'Token is not for this application (got {token_client_id}, expected {app_client_id})')
 
         # Verify token_use is either 'access' or 'id'
         token_use = payload.get('token_use')
         if token_use not in ['access', 'id']:
-            raise jwt.InvalidTokenError('Invalid token_use claim')
+            raise jwt.InvalidTokenError(f'Invalid token_use claim: {token_use}')
 
         return payload
 

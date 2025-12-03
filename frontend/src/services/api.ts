@@ -23,6 +23,10 @@ import type {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
+// Flag to prevent auto-signout during OAuth callback
+let isProcessingCallback = false
+export const setProcessingCallback = (value: boolean) => { isProcessingCallback = value }
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -58,6 +62,12 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // Skip auto-signout during OAuth callback processing
+    if (isProcessingCallback) {
+      console.debug('Skipping auto-signout during callback processing');
+      return Promise.reject(error);
+    }
+
     // Only clear session if we sent a token and got 401/403
     const hadAuthToken = error.config?.headers?.Authorization;
     const isAuthError = error.response?.status === 401 || error.response?.status === 403;

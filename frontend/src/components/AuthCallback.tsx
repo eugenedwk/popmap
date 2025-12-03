@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { apiClient } from '../services/api';
+import { apiClient, setProcessingCallback } from '../services/api';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,32 @@ export function AuthCallback() {
 
   useEffect(() => {
     async function handleCallback() {
+      // Prevent auto-signout during callback processing
+      setProcessingCallback(true);
+
       try {
-        // Wait a bit for Amplify to process the auth code
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait for Amplify to process the auth code
+        // The Hub listener in Amplify handles the token exchange
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Check if we have a valid session before calling backend
+        const { fetchAuthSession } = await import('aws-amplify/auth');
+        let session = await fetchAuthSession();
+
+        // Retry a few times if token not ready
+        let retries = 0;
+        while (!session.tokens?.idToken && retries < 3) {
+          console.log(`No token yet, waiting... (attempt ${retries + 1})`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          session = await fetchAuthSession();
+          retries++;
+        }
+
+        if (!session.tokens?.idToken) {
+          throw new Error('Failed to get authentication token');
+        }
+
+        console.log('Token obtained, refreshing user...');
 
         // Refresh user data from backend
         await refreshUser();
@@ -50,6 +73,9 @@ export function AuthCallback() {
       } catch (err) {
         console.error('Callback error:', err);
         setError('Something went wrong during authentication.');
+      } finally {
+        // Re-enable auto-signout
+        setProcessingCallback(false);
       }
     }
 
