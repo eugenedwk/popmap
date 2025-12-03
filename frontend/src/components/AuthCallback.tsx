@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { apiClient } from '../services/api';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 export function AuthCallback() {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading, refreshUser } = useAuth();
+  const { isAuthenticated, isLoading, refreshUser, user } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -19,10 +20,30 @@ export function AuthCallback() {
         // Refresh user data from backend
         await refreshUser();
 
+        // Check for pending role from signup flow
+        const pendingRole = localStorage.getItem('pendingUserRole');
+        if (pendingRole && (pendingRole === 'business_owner' || pendingRole === 'attendee')) {
+          try {
+            // Apply the role to the user's profile
+            await apiClient.patch('/auth/profile/', { role: pendingRole });
+            // Refresh user data to get updated role
+            await refreshUser();
+          } catch (err) {
+            console.error('Failed to set user role:', err);
+          } finally {
+            // Clear the pending role
+            localStorage.removeItem('pendingUserRole');
+          }
+        }
+
         // Check if authenticated
         if (isAuthenticated) {
-          // Redirect to home
-          navigate('/', { replace: true });
+          // If business owner, redirect to onboarding if profile not complete
+          if (pendingRole === 'business_owner') {
+            navigate('/onboarding/business', { replace: true });
+          } else {
+            navigate('/', { replace: true });
+          }
         } else {
           setError('Authentication failed. Please try again.');
         }

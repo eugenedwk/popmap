@@ -40,9 +40,8 @@ export function Signup() {
   const handleSocialSignup = async (provider: 'Facebook' | 'Google') => {
     try {
       setError('');
-      await signInWithSocial(provider);
-      // User will be redirected to social provider, then back to /callback
-      // They can set their role after first login
+      // Pass the selected role to be applied after OAuth callback
+      await signInWithSocial(provider, role);
     } catch (err: any) {
       console.error('Social signup error:', err);
       setError(err.message || `Failed to sign up with ${provider}`);

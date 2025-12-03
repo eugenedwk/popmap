@@ -35,7 +35,7 @@ interface AuthContextType {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string, role: 'business_owner' | 'attendee') => Promise<void>;
   confirmSignUp: (email: string, code: string) => Promise<void>;
-  signInWithSocial: (provider: 'Facebook' | 'Google') => Promise<void>;
+  signInWithSocial: (provider: 'Facebook' | 'Google', role?: 'business_owner' | 'attendee') => Promise<void>;
   signOut: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
   refreshUser: () => Promise<void>;
@@ -125,8 +125,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function signInWithSocial(provider: 'Facebook' | 'Google') {
+  async function signInWithSocial(provider: 'Facebook' | 'Google', role?: 'business_owner' | 'attendee') {
     try {
+      // Store role in localStorage if provided (for signup flow)
+      if (role) {
+        localStorage.setItem('pendingUserRole', role);
+      }
       await signInWithRedirect({
         provider: { custom: provider },
       });
