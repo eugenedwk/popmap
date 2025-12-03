@@ -31,7 +31,7 @@ class Command(BaseCommand):
                 'slug': 'premium',
                 'plan_type': 'premium',
                 'description': 'Unlimited events, custom subdomain, form builder, and priority support',
-                'price': 29.99,  # Update this to your actual price
+                'price': 15.00,
                 'stripe_product_id': 'prod_TVucSMYP4ad2bg',
                 'stripe_price_id': 'price_1SYsnSB43qorEmjGYoDXWlvf',
                 'max_events_per_month': 0,  # 0 = unlimited
