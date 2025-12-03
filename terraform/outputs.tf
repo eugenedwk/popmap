@@ -223,20 +223,15 @@ output "backend_api_endpoint" {
 }
 
 output "django_secret_key_arn" {
-  description = "ARN of Django secret key in Secrets Manager"
-  value       = aws_secretsmanager_secret.django_secret_key.arn
+  description = "ARN of Django secret key in SSM Parameter Store"
+  value       = aws_ssm_parameter.django_secret_key.arn
   sensitive   = true
 }
 
-output "db_secret_arn" {
-  description = "ARN of the database credentials secret"
-  value       = aws_secretsmanager_secret.db_credentials.arn
+output "database_url_arn" {
+  description = "ARN of the database URL in SSM Parameter Store"
+  value       = aws_ssm_parameter.database_url.arn
   sensitive   = true
-}
-
-output "db_secret_name" {
-  description = "Name of the database credentials secret"
-  value       = aws_secretsmanager_secret.db_credentials.name
 }
 
 output "ecs_deployment_instructions" {
@@ -275,7 +270,7 @@ output "ecs_deployment_instructions" {
     6. Your API will be available at:
        https://api.${var.domain_name}
 
-    Note: The Django secret key has been automatically generated and stored in AWS Secrets Manager.
+    Note: The Django secret key and database URL are stored in AWS SSM Parameter Store (SecureString).
   EOT
 }
 # Wildcard Subdomain Outputs

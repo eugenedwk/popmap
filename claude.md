@@ -307,7 +307,63 @@ New exploration tasks for future consideration:
 - Task 18: Instagram hashtag feed embedding
 - Task 19: Geofenced check-in system (builds on Task #12)
 
-**Last Updated**: 2025-11-23
+**Last Updated**: 2025-12-03
+
+---
+
+## Subscription Tier Structure
+
+### Free Tier
+Goal: Get businesses hooked, let them prove value to themselves
+
+| Feature | Limit |
+|---------|-------|
+| Events per month | 3 |
+| Multi-day events | Yes |
+| Recurring events | No |
+| Event images | 1 per event |
+| Basic profile page | Yes |
+| Custom subdomain | No |
+| Page customization | No |
+| View RSVPs | Count only |
+| Form builder | No |
+| CTA buttons on events | No |
+| Listed on map | Yes |
+| Featured listing | No |
+| Support | Community/slow |
+
+### Premium Tier
+Goal: Convert active businesses hitting free tier limits
+
+| Feature | Included |
+|---------|----------|
+| Events per month | Unlimited |
+| Multi-day events | Yes |
+| Recurring events | Yes |
+| Event images | Unlimited |
+| Basic profile page | Yes |
+| Custom subdomain | Yes |
+| Page customization | Yes (colors, background) |
+| Remove "Powered by PopMap" | Yes |
+| View RSVPs | Full list + emails |
+| Form builder | Yes |
+| CTA buttons on events | Yes |
+| Listed on map | Yes |
+| Featured/boosted listing | Yes |
+| Support | Priority |
+
+### Upgrade Triggers (what makes free users convert)
+- "I want to post more events" → event limit
+- "I want to contact my RSVPs" → RSVP list access
+- "I want my own brand" → subdomain + customization
+- "I want to collect signups" → form builder
+- "I want to sell tickets" → CTA buttons
+
+### Stripe Configuration
+1. Create products/prices in Stripe Dashboard first
+2. Copy `prod_xxx` and `price_xxx` IDs to Django admin SubscriptionPlan
+3. Configure webhook URL: `https://api.popmap.co/api/billing/webhook/`
+4. Required env vars: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 
 ---
 

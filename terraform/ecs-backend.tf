@@ -421,11 +421,11 @@ resource "aws_ecs_task_definition" "backend" {
       secrets = [
         {
           name      = "SECRET_KEY"
-          valueFrom = aws_secretsmanager_secret.django_secret_key.arn
+          valueFrom = aws_ssm_parameter.django_secret_key.arn
         },
         {
           name      = "DATABASE_URL"
-          valueFrom = "${aws_secretsmanager_secret.db_credentials.arn}:DATABASE_URL::"
+          valueFrom = aws_ssm_parameter.database_url.arn
         },
         {
           name      = "EMAIL_HOST_USER"
@@ -474,11 +474,20 @@ resource "aws_ecs_task_definition" "backend" {
   }
 }
 
-# ===== Secrets Manager for Django Secret Key =====
+# ===== SSM Parameter Store for Django Secret Key =====
+# Using Parameter Store instead of Secrets Manager to save ~$0.40/month per secret
 
-resource "aws_secretsmanager_secret" "django_secret_key" {
-  name        = "${var.project_name}-django-secret-key-${var.environment}"
+# Generate a random secret key
+resource "random_password" "django_secret_key" {
+  length  = 50
+  special = true
+}
+
+resource "aws_ssm_parameter" "django_secret_key" {
+  name        = "/${var.project_name}/${var.environment}/django-secret-key"
   description = "Django SECRET_KEY for ${var.environment} environment"
+  type        = "SecureString"
+  value       = random_password.django_secret_key.result
 
   tags = {
     Name        = "${var.project_name}-django-secret-key"
@@ -486,40 +495,18 @@ resource "aws_secretsmanager_secret" "django_secret_key" {
   }
 }
 
-# Generate a random secret key (you should update this with your actual key)
-resource "random_password" "django_secret_key" {
-  length  = 50
-  special = true
-}
+# ===== SSM Parameter Store for Database URL =====
 
-resource "aws_secretsmanager_secret_version" "django_secret_key" {
-  secret_id     = aws_secretsmanager_secret.django_secret_key.id
-  secret_string = random_password.django_secret_key.result
-}
-
-# ===== Secrets Manager for Database Credentials =====
-
-resource "aws_secretsmanager_secret" "db_credentials" {
-  name        = "${var.project_name}/${var.environment}/db-credentials"
-  description = "Database credentials for ${var.project_name} ${var.environment}"
+resource "aws_ssm_parameter" "database_url" {
+  name        = "/${var.project_name}/${var.environment}/database-url"
+  description = "Database connection URL for ${var.project_name} ${var.environment}"
+  type        = "SecureString"
+  value       = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.postgres.endpoint}/${aws_db_instance.postgres.db_name}"
 
   tags = {
-    Name        = "${var.project_name}-db-credentials"
+    Name        = "${var.project_name}-database-url"
     Environment = var.environment
   }
-}
-
-resource "aws_secretsmanager_secret_version" "db_credentials" {
-  secret_id = aws_secretsmanager_secret.db_credentials.id
-  secret_string = jsonencode({
-    username     = var.db_username
-    password     = var.db_password
-    engine       = "postgres"
-    host         = aws_db_instance.postgres.address
-    port         = aws_db_instance.postgres.port
-    dbname       = aws_db_instance.postgres.db_name
-    DATABASE_URL = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.postgres.endpoint}/${aws_db_instance.postgres.db_name}"
-  })
 }
 
 # ===== Secrets Manager for SES SMTP Credentials =====
@@ -536,7 +523,7 @@ data "aws_secretsmanager_secret" "stripe" {
   name = "popmap/prod/stripe"
 }
 
-# Allow ECS task execution role to read secrets
+# Allow ECS task execution role to read secrets from SSM and Secrets Manager
 resource "aws_iam_role_policy" "ecs_secrets_access" {
   name = "${var.project_name}-ecs-secrets-policy"
   role = aws_iam_role.ecs_task_execution.id
@@ -547,11 +534,20 @@ resource "aws_iam_role_policy" "ecs_secrets_access" {
       {
         Effect = "Allow"
         Action = [
+          "ssm:GetParameters",
+          "ssm:GetParameter"
+        ]
+        Resource = [
+          aws_ssm_parameter.django_secret_key.arn,
+          aws_ssm_parameter.database_url.arn
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          aws_secretsmanager_secret.django_secret_key.arn,
-          aws_secretsmanager_secret.db_credentials.arn,
           data.aws_secretsmanager_secret.ses_smtp.arn,
           data.aws_secretsmanager_secret.stripe.arn
         ]

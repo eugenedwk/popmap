@@ -60,7 +60,7 @@ variable "postgres_version" {
 variable "db_instance_class" {
   description = "RDS instance class"
   type        = string
-  default     = "db.t3.micro"  # Free tier eligible, use db.t3.small or larger for prod
+  default     = "db.t4g.micro"  # Graviton (ARM) - ~10% cheaper than t3.micro
 }
 
 variable "db_allocated_storage" {
