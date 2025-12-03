@@ -30,19 +30,34 @@ const eventSchema = z.object({
   latitude: z.string().regex(/^-?\d+\.?\d*$/, 'Invalid latitude'),
   longitude: z.string().regex(/^-?\d+\.?\d*$/, 'Invalid longitude'),
   event_date: z.string().min(1, 'Event date is required'),
+  end_date: z.string().optional(),
   start_time: z.string().min(1, 'Start time is required'),
   end_time: z.string().min(1, 'End time is required'),
+  is_multi_day: z.boolean().default(false),
   is_recurring: z.boolean().default(false),
   recurrence_count: z.string().optional(),
   business_ids: z.array(z.number()).min(1, 'Select at least one business'),
   form_template: z.number().optional(),
   image: z.any().optional(),
 }).refine((data) => {
-  // Validate end time is after start time
-  return data.end_time > data.start_time
+  // For single-day events, validate end time is after start time
+  if (!data.is_multi_day) {
+    return data.end_time > data.start_time
+  }
+  return true
 }, {
   message: 'End time must be after start time',
   path: ['end_time'],
+}).refine((data) => {
+  // For multi-day events, validate end date is provided and after start date
+  if (data.is_multi_day) {
+    if (!data.end_date) return false
+    return data.end_date >= data.event_date
+  }
+  return true
+}, {
+  message: 'End date must be on or after start date',
+  path: ['end_date'],
 }).refine((data) => {
   // If button text is provided, URL must be provided and vice versa
   const hasText = data.cta_button_text && data.cta_button_text.trim() !== ''
@@ -116,8 +131,10 @@ function EventFormContent() {
       latitude: '',
       longitude: '',
       event_date: '',
+      end_date: '',
       start_time: '',
       end_time: '',
+      is_multi_day: false,
       is_recurring: false,
       recurrence_count: '1',
       business_ids: [],
@@ -125,7 +142,8 @@ function EventFormContent() {
     },
   })
 
-  // Watch the is_recurring field to show/hide recurrence options
+  // Watch the is_multi_day and is_recurring fields to show/hide options
+  const isMultiDay = form.watch('is_multi_day')
   const isRecurring = form.watch('is_recurring')
 
   // Handle place selection from autocomplete
@@ -144,8 +162,10 @@ function EventFormContent() {
     setSubmitStatus(null)
 
     // Combine date and time into datetime strings
+    // For multi-day events, use end_date; otherwise use event_date
     const start_datetime = `${data.event_date}T${data.start_time}`
-    const end_datetime = `${data.event_date}T${data.end_time}`
+    const endDate = data.is_multi_day ? data.end_date : data.event_date
+    const end_datetime = `${endDate}T${data.end_time}`
 
     const formData = {
       title: data.title,
@@ -449,17 +469,62 @@ function EventFormContent() {
 
               <FormField
                 control={form.control}
-                name="event_date"
+                name="is_multi_day"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Event Date *</FormLabel>
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Multi-day event
+                      </FormLabel>
+                      <FormDescription>
+                        Check this if the event spans multiple days (e.g., a weekend festival)
+                      </FormDescription>
+                    </div>
                   </FormItem>
                 )}
               />
+
+              <div className={`grid gap-4 ${isMultiDay ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                <FormField
+                  control={form.control}
+                  name="event_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{isMultiDay ? 'Start Date *' : 'Event Date *'}</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {isMultiDay && (
+                  <FormField
+                    control={form.control}
+                    name="end_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            min={form.watch('event_date')}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -467,7 +532,7 @@ function EventFormContent() {
                   name="start_time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Start Time *</FormLabel>
+                      <FormLabel>{isMultiDay ? 'Start Time (first day) *' : 'Start Time *'}</FormLabel>
                       <FormControl>
                         <Input type="time" {...field} />
                       </FormControl>
@@ -481,7 +546,7 @@ function EventFormContent() {
                   name="end_time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>End Time *</FormLabel>
+                      <FormLabel>{isMultiDay ? 'End Time (last day) *' : 'End Time *'}</FormLabel>
                       <FormControl>
                         <Input type="time" {...field} />
                       </FormControl>
@@ -507,7 +572,7 @@ function EventFormContent() {
                         Recurring event
                       </FormLabel>
                       <FormDescription>
-                        Check this if the event repeats weekly
+                        Check this if the event repeats weekly{isMultiDay ? ' (each occurrence will span the same number of days)' : ''}
                       </FormDescription>
                     </div>
                   </FormItem>
