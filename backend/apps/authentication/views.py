@@ -3,10 +3,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
+from django.contrib.auth.models import User
 from .serializers import UserSerializer, UpdateProfileSerializer
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
@@ -16,7 +14,9 @@ def me(request):
     Get current authenticated user information.
     Includes profile data and role information.
     """
-    serializer = UserSerializer(request.user)
+    # Re-fetch to ensure fresh data with profile relationship
+    fresh_user = User.objects.select_related('profile').get(pk=request.user.pk)
+    serializer = UserSerializer(fresh_user)
     return Response(serializer.data)
 
 
@@ -32,8 +32,11 @@ def update_profile(request):
     if serializer.is_valid():
         serializer.update(request.user, serializer.validated_data)
 
+        # Re-fetch user from database to avoid any caching issues
+        fresh_user = User.objects.select_related('profile').get(pk=request.user.pk)
+
         # Return updated user data
-        user_serializer = UserSerializer(request.user)
+        user_serializer = UserSerializer(fresh_user)
         return Response(user_serializer.data)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

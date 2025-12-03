@@ -118,11 +118,10 @@ class CognitoAuthentication(authentication.BaseAuthentication):
                 user.email = email
                 user.save(update_fields=['email'])
 
-            # Update profile if role or provider changed
-            if user_profile.role != user_role or user_profile.identity_provider != identity_provider:
-                user_profile.role = user_role
+            # Update identity provider if changed (but NOT the role - user may have changed it via profile)
+            if user_profile.identity_provider != identity_provider:
                 user_profile.identity_provider = identity_provider
-                user_profile.save(update_fields=['role', 'identity_provider', 'updated_at'])
+                user_profile.save(update_fields=['identity_provider', 'updated_at'])
 
             return user
 
@@ -144,15 +143,25 @@ class CognitoAuthentication(authentication.BaseAuthentication):
             user.email = email
             user.save(update_fields=['email'])
 
-        # Create user profile and link to Cognito
-        UserProfile.objects.create(
+        # Get or create user profile - handles race conditions and existing users
+        user_profile, profile_created = UserProfile.objects.get_or_create(
             user=user,
-            cognito_sub=cognito_sub,
-            role=user_role,
-            identity_provider=identity_provider,
-            is_profile_complete=False
+            defaults={
+                'cognito_sub': cognito_sub,
+                'role': user_role,
+                'identity_provider': identity_provider,
+                'is_profile_complete': False
+            }
         )
 
-        logger.info(f'Created new user: {username} with role: {user_role}')
+        if profile_created:
+            logger.info(f'Created new user: {username} with role: {user_role}')
+        else:
+            # Profile already exists, update cognito_sub if different
+            if user_profile.cognito_sub != cognito_sub:
+                user_profile.cognito_sub = cognito_sub
+                user_profile.identity_provider = identity_provider
+                user_profile.save(update_fields=['cognito_sub', 'identity_provider', 'updated_at'])
+                logger.info(f'Updated cognito_sub for existing user: {username}')
 
         return user

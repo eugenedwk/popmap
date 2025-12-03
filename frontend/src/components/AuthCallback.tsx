@@ -8,11 +8,24 @@ import { Button } from '@/components/ui/button';
 
 export function AuthCallback() {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading, refreshUser, user } = useAuth();
+  const { isLoading, refreshUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function handleCallback() {
+      // Use sessionStorage to prevent duplicate processing across mounts
+      // This survives React Strict Mode and component re-renders
+      const callbackId = sessionStorage.getItem('authCallbackProcessing');
+      const now = Date.now();
+
+      // If a callback was started within the last 30 seconds, skip
+      if (callbackId && (now - parseInt(callbackId)) < 30000) {
+        return;
+      }
+
+      // Mark callback as processing with current timestamp
+      sessionStorage.setItem('authCallbackProcessing', now.toString());
+
       // Prevent auto-signout during callback processing
       setProcessingCallback(true);
 
@@ -28,7 +41,6 @@ export function AuthCallback() {
         // Retry a few times if token not ready
         let retries = 0;
         while (!session.tokens?.idToken && retries < 3) {
-          console.log(`No token yet, waiting... (attempt ${retries + 1})`);
           await new Promise(resolve => setTimeout(resolve, 2000));
           session = await fetchAuthSession();
           retries++;
@@ -38,13 +50,17 @@ export function AuthCallback() {
           throw new Error('Failed to get authentication token');
         }
 
-        console.log('Token obtained, refreshing user...');
-
-        // Refresh user data from backend
+        // Refresh user data from backend - this creates the user if they don't exist
         await refreshUser();
 
-        // Check for pending role from signup flow
+        // Check for pending role from signup flow - get it before any async operations
         const pendingRole = localStorage.getItem('pendingUserRole');
+
+        // Clear the pending role immediately to prevent duplicate processing
+        if (pendingRole) {
+          localStorage.removeItem('pendingUserRole');
+        }
+
         if (pendingRole && (pendingRole === 'business_owner' || pendingRole === 'attendee')) {
           try {
             // Apply the role to the user's profile
@@ -53,26 +69,20 @@ export function AuthCallback() {
             await refreshUser();
           } catch (err) {
             console.error('Failed to set user role:', err);
-          } finally {
-            // Clear the pending role
-            localStorage.removeItem('pendingUserRole');
           }
         }
 
-        // Check if authenticated
-        if (isAuthenticated) {
-          // If business owner, redirect to onboarding if profile not complete
-          if (pendingRole === 'business_owner') {
-            navigate('/onboarding/business', { replace: true });
-          } else {
-            navigate('/', { replace: true });
-          }
+        // Navigate based on the role - don't rely on React state which may be stale
+        if (pendingRole === 'business_owner') {
+          navigate('/onboarding/business', { replace: true });
         } else {
-          setError('Authentication failed. Please try again.');
+          navigate('/', { replace: true });
         }
       } catch (err) {
         console.error('Callback error:', err);
         setError('Something went wrong during authentication.');
+        // Clear the processing flag on error so user can retry
+        sessionStorage.removeItem('authCallbackProcessing');
       } finally {
         // Re-enable auto-signout
         setProcessingCallback(false);
@@ -82,7 +92,7 @@ export function AuthCallback() {
     if (!isLoading) {
       handleCallback();
     }
-  }, [isAuthenticated, isLoading, navigate, refreshUser]);
+  }, [isLoading, navigate, refreshUser]);
 
   if (error) {
     return (

@@ -66,15 +66,6 @@ function Sidebar({ currentView, onViewChange }) {
   const isBusinessOwner = isAuthenticated && user?.is_business_owner;
   const onSubdomain = isOnSubdomain();
 
-  // Debug logging
-  console.log('Sidebar Auth Debug:', {
-    isAuthenticated,
-    user,
-    isBusinessOwner,
-    userRole: user?.role,
-    userProfile: user?.profile,
-  });
-
   // Handle view change - use external links on subdomain
   const handleViewClick = (viewId: string) => {
     if (onSubdomain) {
