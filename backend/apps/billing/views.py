@@ -19,7 +19,7 @@ class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
     GET /api/billing/plans/ - List all active plans
     GET /api/billing/plans/{id}/ - Get plan details
     """
-    queryset = SubscriptionPlan.objects.filter(is_active=True)
+    queryset = SubscriptionPlan.objects.filter(is_active=True).exclude(plan_type='beta-tester')
     serializer_class = SubscriptionPlanSerializer
     permission_classes = []  # Public endpoint
     pagination_class = None  # No pagination needed for plans
