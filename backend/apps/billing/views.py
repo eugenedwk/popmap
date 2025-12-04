@@ -22,6 +22,7 @@ class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = SubscriptionPlan.objects.filter(is_active=True)
     serializer_class = SubscriptionPlanSerializer
     permission_classes = []  # Public endpoint
+    pagination_class = None  # No pagination needed for plans
 
 
 class SubscriptionViewSet(viewsets.ViewSet):
