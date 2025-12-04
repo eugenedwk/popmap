@@ -1,0 +1,197 @@
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
+
+
+class PageView(models.Model):
+    """
+    Tracks page views for events and business pages.
+    Uses session_id for unique visitor tracking (privacy-friendly - no PII).
+    """
+    PAGE_TYPE_CHOICES = [
+        ('event', 'Event Page'),
+        ('business', 'Business Page'),
+    ]
+
+    page_type = models.CharField(max_length=20, choices=PAGE_TYPE_CHOICES)
+
+    # Reference to the viewed page (event_id or business_id)
+    object_id = models.IntegerField(help_text="ID of the event or business")
+
+    # Session tracking (privacy-friendly - no user tracking)
+    session_id = models.CharField(
+        max_length=64,
+        help_text="Anonymous session identifier for unique visitor counting"
+    )
+
+    # Request metadata
+    referrer = models.URLField(blank=True, help_text="HTTP referrer URL")
+    referrer_type = models.CharField(
+        max_length=30,
+        blank=True,
+        choices=[
+            ('direct', 'Direct'),
+            ('social_instagram', 'Instagram'),
+            ('social_facebook', 'Facebook'),
+            ('social_twitter', 'Twitter/X'),
+            ('social_tiktok', 'TikTok'),
+            ('search', 'Search Engine'),
+            ('subdomain', 'Custom Subdomain'),
+            ('internal', 'Internal Link'),
+            ('other', 'Other'),
+        ],
+        help_text="Categorized referrer source"
+    )
+    user_agent = models.CharField(max_length=500, blank=True)
+
+    # Device info (derived from user_agent, stored for quick queries)
+    is_mobile = models.BooleanField(default=False)
+
+    # Timestamp
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['page_type', 'object_id', 'created_at']),
+            models.Index(fields=['page_type', 'object_id', 'session_id']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['referrer_type']),
+        ]
+        verbose_name = "Page View"
+        verbose_name_plural = "Page Views"
+
+    def __str__(self):
+        return f"{self.page_type}:{self.object_id} at {self.created_at}"
+
+    @classmethod
+    def cleanup_old_records(cls, days=90):
+        """Delete records older than specified days for GDPR compliance."""
+        cutoff = timezone.now() - timedelta(days=days)
+        return cls.objects.filter(created_at__lt=cutoff).delete()
+
+
+class Interaction(models.Model):
+    """
+    Tracks user interactions on events and business pages.
+    Examples: CTA clicks, share button clicks, form opens.
+    """
+    INTERACTION_TYPE_CHOICES = [
+        ('cta_click', 'CTA Button Click'),
+        ('share_instagram', 'Share to Instagram'),
+        ('share_facebook', 'Share to Facebook'),
+        ('share_twitter', 'Share to Twitter/X'),
+        ('share_copy_link', 'Copy Link'),
+        ('share_native', 'Native Share'),
+        ('rsvp_interested', 'RSVP Interested'),
+        ('rsvp_going', 'RSVP Going'),
+        ('form_open', 'Form Opened'),
+        ('form_submit', 'Form Submitted'),
+        ('directions_click', 'Directions Clicked'),
+        ('website_click', 'Website Clicked'),
+        ('instagram_click', 'Instagram Profile Clicked'),
+        ('tiktok_click', 'TikTok Profile Clicked'),
+    ]
+
+    PAGE_TYPE_CHOICES = [
+        ('event', 'Event Page'),
+        ('business', 'Business Page'),
+    ]
+
+    interaction_type = models.CharField(max_length=30, choices=INTERACTION_TYPE_CHOICES)
+    page_type = models.CharField(max_length=20, choices=PAGE_TYPE_CHOICES)
+    object_id = models.IntegerField(help_text="ID of the event or business")
+
+    # Session tracking
+    session_id = models.CharField(max_length=64)
+
+    # Optional metadata (e.g., CTA button URL clicked)
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Additional interaction data (e.g., clicked URL)"
+    )
+
+    # Timestamp
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['page_type', 'object_id', 'created_at']),
+            models.Index(fields=['page_type', 'object_id', 'interaction_type']),
+            models.Index(fields=['interaction_type', 'created_at']),
+        ]
+        verbose_name = "Interaction"
+        verbose_name_plural = "Interactions"
+
+    def __str__(self):
+        return f"{self.interaction_type} on {self.page_type}:{self.object_id}"
+
+    @classmethod
+    def cleanup_old_records(cls, days=90):
+        """Delete records older than specified days for GDPR compliance."""
+        cutoff = timezone.now() - timedelta(days=days)
+        return cls.objects.filter(created_at__lt=cutoff).delete()
+
+
+class AnalyticsSummary(models.Model):
+    """
+    Pre-aggregated daily analytics for faster dashboard queries.
+    Generated by a scheduled task from raw PageView and Interaction data.
+    """
+    PAGE_TYPE_CHOICES = [
+        ('event', 'Event'),
+        ('business', 'Business'),
+    ]
+
+    page_type = models.CharField(max_length=20, choices=PAGE_TYPE_CHOICES)
+    object_id = models.IntegerField()
+    date = models.DateField()
+
+    # View metrics
+    total_views = models.IntegerField(default=0)
+    unique_views = models.IntegerField(default=0)
+    mobile_views = models.IntegerField(default=0)
+    desktop_views = models.IntegerField(default=0)
+
+    # Referrer breakdown
+    referrer_direct = models.IntegerField(default=0)
+    referrer_social = models.IntegerField(default=0)
+    referrer_search = models.IntegerField(default=0)
+    referrer_subdomain = models.IntegerField(default=0)
+    referrer_internal = models.IntegerField(default=0)
+    referrer_other = models.IntegerField(default=0)
+
+    # Interaction counts
+    cta_clicks = models.IntegerField(default=0)
+    share_clicks = models.IntegerField(default=0)
+    rsvp_interested = models.IntegerField(default=0)
+    rsvp_going = models.IntegerField(default=0)
+    form_opens = models.IntegerField(default=0)
+    form_submits = models.IntegerField(default=0)
+    directions_clicks = models.IntegerField(default=0)
+    external_link_clicks = models.IntegerField(default=0)
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date']
+        indexes = [
+            models.Index(fields=['page_type', 'object_id', 'date']),
+            models.Index(fields=['date']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['page_type', 'object_id', 'date'],
+                name='unique_daily_summary'
+            )
+        ]
+        verbose_name = "Analytics Summary"
+        verbose_name_plural = "Analytics Summaries"
+
+    def __str__(self):
+        return f"{self.page_type}:{self.object_id} - {self.date}"

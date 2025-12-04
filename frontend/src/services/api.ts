@@ -18,7 +18,10 @@ import type {
   FormTemplateFormData,
   GuestRSVPFormData,
   GuestRSVPCheckResponse,
-  EventRSVP
+  EventRSVP,
+  AnalyticsOverview,
+  EventAnalytics,
+  EventDetailAnalytics
 } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -231,6 +234,21 @@ export const formsApi = {
 
   getSubmissions: (templateId: number): Promise<AxiosResponse<FormSubmission[]>> =>
     apiClient.get(`/forms/templates/${templateId}/submissions/`),
+}
+
+// Analytics API (Premium feature)
+export const analyticsApi = {
+  // Get overview analytics for a business (all events aggregated)
+  getBusinessOverview: (businessId: number, days: number = 30): Promise<AxiosResponse<AnalyticsOverview>> =>
+    apiClient.get(`/analytics/dashboard/business/${businessId}/overview/`, { params: { days } }),
+
+  // Get analytics breakdown by event for a business
+  getBusinessEvents: (businessId: number, days: number = 30): Promise<AxiosResponse<{ events: EventAnalytics[] }>> =>
+    apiClient.get(`/analytics/dashboard/business/${businessId}/events/`, { params: { days } }),
+
+  // Get detailed analytics for a specific event
+  getEventDetail: (eventId: number, days: number = 30): Promise<AxiosResponse<EventDetailAnalytics>> =>
+    apiClient.get(`/analytics/dashboard/event/${eventId}/`, { params: { days } }),
 }
 
 export default apiClient

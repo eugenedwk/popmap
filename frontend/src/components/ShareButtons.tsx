@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Share2, Facebook, Twitter } from 'lucide-react'
+import { trackShare } from '../services/analytics'
+import type { PageType } from '../types'
 
 interface ShareButtonsProps {
   url: string
   title: string
   description?: string
+  pageType?: PageType
+  objectId?: number
 }
 
-export function ShareButtons({ url, title, description }: ShareButtonsProps) {
+export function ShareButtons({ url, title, description, pageType, objectId }: ShareButtonsProps) {
   const [isSharing, setIsSharing] = useState(false)
 
   const shareData = {
@@ -22,6 +26,10 @@ export function ShareButtons({ url, title, description }: ShareButtonsProps) {
       try {
         setIsSharing(true)
         await navigator.share(shareData)
+        // Track after successful share
+        if (pageType && objectId) {
+          trackShare('native', pageType, objectId)
+        }
       } catch (error) {
         // User cancelled or error occurred
         console.log('Share cancelled or failed:', error)
@@ -34,12 +42,18 @@ export function ShareButtons({ url, title, description }: ShareButtonsProps) {
   const handleFacebookShare = () => {
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
     window.open(facebookUrl, '_blank', 'width=600,height=400')
+    if (pageType && objectId) {
+      trackShare('facebook', pageType, objectId)
+    }
   }
 
   const handleTwitterShare = () => {
     const text = description ? `${title} - ${description}` : title
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
     window.open(twitterUrl, '_blank', 'width=600,height=400')
+    if (pageType && objectId) {
+      trackShare('twitter', pageType, objectId)
+    }
   }
 
   // If native share is available (typically on mobile), show a single share button

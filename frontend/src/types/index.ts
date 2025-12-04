@@ -271,3 +271,93 @@ export interface FormTemplateFormData {
   submit_button_text?: string
   submit_button_icon?: string
 }
+
+// Analytics types
+export type PageType = 'event' | 'business'
+
+export type InteractionType =
+  | 'cta_click'
+  | 'share_instagram'
+  | 'share_facebook'
+  | 'share_twitter'
+  | 'share_copy_link'
+  | 'share_native'
+  | 'rsvp_interested'
+  | 'rsvp_going'
+  | 'form_open'
+  | 'form_submit'
+  | 'directions_click'
+  | 'website_click'
+  | 'instagram_click'
+  | 'tiktok_click'
+
+export interface PageViewData {
+  page_type: PageType
+  object_id: number
+  session_id: string
+  referrer: string
+  user_agent: string
+  is_mobile: boolean
+}
+
+export interface InteractionData {
+  interaction_type: InteractionType
+  page_type: PageType
+  object_id: number
+  session_id: string
+  metadata?: Record<string, unknown>
+}
+
+export interface DailyViewData {
+  date: string
+  views: number
+  unique: number
+}
+
+export interface ReferrerData {
+  source: string
+  count: number
+}
+
+export interface AnalyticsOverview {
+  period_start: string
+  period_end: string
+  total_views: number
+  unique_visitors: number
+  views_change_percent: number | null
+  mobile_percent: number
+  desktop_percent: number
+  top_referrers: ReferrerData[]
+  total_interactions: number
+  cta_clicks: number
+  cta_click_rate: number
+  share_clicks: number
+  rsvp_count: number
+  daily_views: DailyViewData[]
+}
+
+export interface EventAnalytics {
+  event_id: number
+  event_title: string
+  total_views: number
+  unique_visitors: number
+  rsvp_interested: number
+  rsvp_going: number
+  cta_clicks: number
+  share_clicks: number
+  rsvp_conversion_rate: number
+}
+
+export interface EventDetailAnalytics {
+  event_id: number
+  event_title: string
+  period_start: string
+  period_end: string
+  total_views: number
+  unique_visitors: number
+  mobile_views: number
+  desktop_views: number
+  referrers: Record<string, number>
+  interactions: Record<string, number>
+  daily_views: DailyViewData[]
+}

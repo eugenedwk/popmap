@@ -7,12 +7,13 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, Plus, FileText, Eye, Calendar, Edit, Building2, Settings } from 'lucide-react'
+import { Loader2, Plus, FileText, Eye, Calendar, Edit, Building2, Settings, BarChart3 } from 'lucide-react'
 import { BusinessSubdomainSettings } from './BusinessSubdomainSettings'
 import { BusinessEditForm } from './BusinessEditForm'
 import { FormTemplateBuilder } from './FormTemplateBuilder'
 import { BusinessPageSettings } from './BusinessPageSettings'
 import { FormBuilderPaywall } from './FormBuilderPaywall'
+import { AnalyticsDashboard } from './AnalyticsDashboard'
 import { format } from 'date-fns'
 
 /**
@@ -159,10 +160,14 @@ export function BusinessDashboard() {
 
         {/* Tabs */}
         <Tabs defaultValue={defaultTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto">
             <TabsTrigger value="events" className="gap-2">
               <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">My Events</span>
+              <span className="hidden sm:inline">Events</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Analytics</span>
             </TabsTrigger>
             <TabsTrigger value="profile" className="gap-2">
               <Edit className="h-4 w-4" />
@@ -255,6 +260,11 @@ export function BusinessDashboard() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics">
+            <AnalyticsDashboard business={business} />
           </TabsContent>
 
           {/* Profile Tab */}

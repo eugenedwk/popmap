@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { eventsApi, formsApi } from '../services/api'
+import { trackPageView, trackCtaClick, trackRsvp } from '../services/analytics'
 import { useAuth } from '../contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -55,13 +56,21 @@ function EventDetailPage() {
     enabled: !!event?.form_template
   })
 
+  // Track page view when event loads
+  useEffect(() => {
+    if (event?.id) {
+      trackPageView('event', event.id)
+    }
+  }, [event?.id])
+
   // RSVP mutation
   const rsvpMutation = useMutation({
     mutationFn: ({ status }: { status: 'interested' | 'going' }) => {
       if (!eventId) throw new Error('Event ID is required')
       return eventsApi.rsvp(eventId, status)
     },
-    onSuccess: () => {
+    onSuccess: (_, { status }) => {
+      trackRsvp(status, eventId!)
       queryClient.invalidateQueries({ queryKey: ['event', eventId] })
     },
   })
@@ -250,6 +259,8 @@ function EventDetailPage() {
                       url={eventUrl}
                       title={event.title}
                       description={event.description}
+                      pageType="event"
+                      objectId={event.id}
                     />
                   </div>
                   {event.status && event.status !== 'approved' && (
@@ -294,6 +305,7 @@ function EventDetailPage() {
                           href={event.cta_button_url}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={() => trackCtaClick('event', event.id, event.cta_button_url!)}
                         >
                           {event.cta_button_text}
                           <ExternalLink className="h-4 w-4 ml-2" />

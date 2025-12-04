@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'apps.authentication',
     'apps.billing',
     'apps.forms',
+    'apps.analytics',
 ]
 
 MIDDLEWARE = [

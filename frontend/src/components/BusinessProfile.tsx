@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { businessesApi, eventsApi } from '../services/api';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FormRenderer } from './FormRenderer';
+import { trackPageView, trackExternalLinkClick, trackFormOpen } from '../services/analytics';
 import {
   Card,
   CardContent,
@@ -73,6 +74,12 @@ function BusinessProfile() {
     },
   });
 
+  // Track page view when business loads
+  useEffect(() => {
+    if (business?.id) {
+      trackPageView('business', business.id);
+    }
+  }, [business?.id]);
 
   // Mutation for joining events
   const joinEventMutation = useMutation({
