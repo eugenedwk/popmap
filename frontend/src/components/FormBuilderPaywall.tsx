@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Crown, FileText, Zap, Shield, BarChart3, Headphones } from 'lucide-react'
+import { Crown, FileText, Zap, Shield, BarChart3 } from 'lucide-react'
 
 interface FormBuilderPaywallProps {
   canUseFormBuilder: boolean
@@ -93,7 +93,7 @@ export function FormBuilderPaywall({ canUseFormBuilder, children }: FormBuilderP
             <div className="flex items-center justify-between">
               <CardTitle>Premium Plan</CardTitle>
               <div className="text-right">
-                <p className="text-3xl font-bold">$29</p>
+                <p className="text-3xl font-bold">$15</p>
                 <p className="text-sm text-muted-foreground">per month</p>
               </div>
             </div>
@@ -142,20 +142,6 @@ export function FormBuilderPaywall({ canUseFormBuilder, children }: FormBuilderP
             </div>
           </CardContent>
         </Card>
-
-        {/* Additional Benefits */}
-        <div className="bg-muted/50 rounded-lg p-4">
-          <h4 className="font-semibold mb-2 flex items-center gap-2">
-            <Headphones className="h-4 w-4" />
-            Need Help Deciding?
-          </h4>
-          <p className="text-sm text-muted-foreground mb-3">
-            Our team is here to help you choose the right plan for your business needs.
-          </p>
-          <Button variant="outline" size="sm">
-            Contact Support
-          </Button>
-        </div>
       </CardContent>
     </Card>
   )
