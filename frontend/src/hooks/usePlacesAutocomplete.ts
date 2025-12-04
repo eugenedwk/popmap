@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import type { PlaceResult } from '../types'
 
@@ -9,40 +9,62 @@ import type { PlaceResult } from '../types'
 export function usePlacesAutocomplete(
   onPlaceSelect: (place: PlaceResult) => void
 ): React.RefObject<HTMLInputElement> {
-  const [placeAutocomplete, setPlaceAutocomplete] = useState<google.maps.places.Autocomplete | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
+  const listenerRef = useRef<google.maps.MapsEventListener | null>(null)
+  const onPlaceSelectRef = useRef(onPlaceSelect)
   const places = useMapsLibrary('places')
+
+  // Keep the callback ref updated
+  useEffect(() => {
+    onPlaceSelectRef.current = onPlaceSelect
+  }, [onPlaceSelect])
 
   useEffect(() => {
     if (!places || !inputRef.current) return
 
+    // Only create autocomplete once
+    if (autocompleteRef.current) return
+
     const options: google.maps.places.AutocompleteOptions = {
-      fields: ['geometry', 'formatted_address', 'address_components'],
-      types: ['address'], // Only show addresses, not businesses
+      fields: ['geometry', 'formatted_address', 'address_components', 'name'],
+      // Include addresses, establishments (venues/businesses), and geocoded locations
+      types: ['geocode', 'establishment'],
     }
 
-    setPlaceAutocomplete(new places.Autocomplete(inputRef.current, options))
-  }, [places])
+    const autocomplete = new places.Autocomplete(inputRef.current, options)
+    autocompleteRef.current = autocomplete
 
-  useEffect(() => {
-    if (!placeAutocomplete) return
-
-    placeAutocomplete.addListener('place_changed', () => {
-      const place = placeAutocomplete.getPlace()
+    // Add the listener
+    listenerRef.current = autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace()
 
       if (place.geometry && place.geometry.location) {
         const lat = place.geometry.location.lat()
         const lng = place.geometry.location.lng()
-        const address = place.formatted_address || ''
 
-        onPlaceSelect({
+        // For establishments, include the name in the address
+        let address = place.formatted_address || ''
+        if (place.name && !address.startsWith(place.name)) {
+          address = `${place.name}, ${address}`
+        }
+
+        onPlaceSelectRef.current({
           address,
           latitude: lat,
           longitude: lng,
         })
       }
     })
-  }, [placeAutocomplete, onPlaceSelect])
+
+    // Cleanup
+    return () => {
+      if (listenerRef.current) {
+        google.maps.event.removeListener(listenerRef.current)
+        listenerRef.current = null
+      }
+    }
+  }, [places])
 
   return inputRef
 }

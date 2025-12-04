@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -146,15 +146,15 @@ function EventFormContent() {
   const isMultiDay = form.watch('is_multi_day')
   const isRecurring = form.watch('is_recurring')
 
-  // Handle place selection from autocomplete
-  const handlePlaceSelect = (place) => {
+  // Handle place selection from autocomplete - memoized to prevent listener recreation
+  const handlePlaceSelect = useCallback((place) => {
     setSelectedPlace(place)
     form.setValue('address', place.address)
     form.setValue('latitude', place.latitude.toString())
     form.setValue('longitude', place.longitude.toString())
     // Trigger validation
     form.trigger(['address', 'latitude', 'longitude'])
-  }
+  }, [form])
 
   const inputRef = usePlacesAutocomplete(handlePlaceSelect)
 
