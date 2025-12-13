@@ -247,6 +247,17 @@ export function BusinessDashboard() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation()
+                              navigate(`/e/${event.id}/edit`)
+                            }}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
                               navigate(`/e/${event.id}`)
                             }}
                           >
@@ -324,6 +335,14 @@ export function BusinessDashboard() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/forms/${template.id}/edit`)}
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"

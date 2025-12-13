@@ -56,9 +56,20 @@ class BusinessSerializer(serializers.ModelSerializer):
             'logo', 'categories', 'category_ids', 'custom_subdomain',
             'can_use_custom_subdomain', 'subdomain_url',
             'active_form_template', 'active_form_template_id',
-            'background_image_url', 'default_view_mode', 'custom_primary_color',
-            'show_upcoming_events_first', 'can_use_premium_customization',
-            'can_use_form_builder', 'is_verified', 'created_at'
+            # Background options
+            'background_image', 'background_image_url', 'background_color',
+            'background_overlay_opacity',
+            # Branding colors
+            'custom_primary_color', 'secondary_color',
+            # Header banner
+            'header_banner',
+            # Layout options
+            'default_view_mode', 'hide_contact_info', 'hide_social_links',
+            # Content display options
+            'show_upcoming_events_first', 'hide_past_events', 'events_per_page',
+            # Permissions and metadata
+            'can_use_premium_customization', 'can_use_form_builder',
+            'is_verified', 'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'is_verified']
 
@@ -87,7 +98,19 @@ class BusinessSerializer(serializers.ModelSerializer):
         """Validate premium features require subscription"""
         if self.instance:
             # Check if premium customization fields are being modified
-            premium_fields = ['background_image_url', 'custom_primary_color', 'default_view_mode', 'show_upcoming_events_first']
+            premium_fields = [
+                # Background options
+                'background_image', 'background_image_url', 'background_color',
+                'background_overlay_opacity',
+                # Branding colors
+                'custom_primary_color', 'secondary_color',
+                # Header banner
+                'header_banner',
+                # Layout options
+                'default_view_mode', 'hide_contact_info', 'hide_social_links',
+                # Content display options
+                'show_upcoming_events_first', 'hide_past_events', 'events_per_page',
+            ]
             is_modifying_premium = any(
                 field in attrs and attrs.get(field) != getattr(self.instance, field)
                 for field in premium_fields

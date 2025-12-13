@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { businessesApi, eventsApi } from '../services/api';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FormRenderer } from './FormRenderer';
 import { trackPageView, trackExternalLinkClick, trackFormOpen } from '../services/analytics';
 import {
@@ -37,10 +37,78 @@ import {
   Video,
   FileText,
   MessageSquare,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { formatPhoneNumber, generatePrimaryColorVars } from '@/lib/utils';
-import type { Event } from '../types';
+import type { Event, Business } from '../types';
 import { BusinessEventsMap } from './BusinessEventsMap';
+
+/**
+ * Generate CSS custom properties for business customization
+ */
+function generateCustomStyles(business: Business): React.CSSProperties | undefined {
+  if (!business.can_use_premium_customization) return undefined;
+
+  const styles: React.CSSProperties & { [key: string]: string } = {};
+
+  // Primary color
+  if (business.custom_primary_color) {
+    const primaryVars = generatePrimaryColorVars(business.custom_primary_color);
+    Object.assign(styles, primaryVars);
+  }
+
+  // Secondary color for buttons/accents
+  if (business.secondary_color) {
+    styles['--business-secondary'] = business.secondary_color;
+  }
+
+  return Object.keys(styles).length > 0 ? styles : undefined;
+}
+
+/**
+ * Get background styles for the page
+ */
+function getBackgroundStyles(business: Business): {
+  backgroundStyle: React.CSSProperties;
+  overlayStyle: React.CSSProperties;
+  hasBackground: boolean;
+} {
+  if (!business.can_use_premium_customization) {
+    return { backgroundStyle: {}, overlayStyle: {}, hasBackground: false };
+  }
+
+  const backgroundImage = business.background_image || business.background_image_url;
+  const backgroundColor = business.background_color;
+  const overlayOpacity = business.background_overlay_opacity ?? 0;
+
+  let backgroundStyle: React.CSSProperties = {};
+  let hasBackground = false;
+
+  if (backgroundImage) {
+    backgroundStyle = {
+      backgroundImage: `url(${backgroundImage})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: 'fixed',
+    };
+    hasBackground = true;
+  } else if (backgroundColor) {
+    backgroundStyle = {
+      backgroundColor: backgroundColor,
+    };
+    hasBackground = true;
+  }
+
+  const overlayStyle: React.CSSProperties = hasBackground && overlayOpacity > 0
+    ? {
+        backgroundColor: `rgba(0, 0, 0, ${overlayOpacity / 100})`,
+      }
+    : {};
+
+  return { backgroundStyle, overlayStyle, hasBackground };
+}
 
 function BusinessProfile() {
   const { businessId: businessIdParam } = useParams<{ businessId: string }>();
@@ -49,6 +117,7 @@ function BusinessProfile() {
   const businessId = businessIdParam ? parseInt(businessIdParam, 10) : null;
   const [joiningEventId, setJoiningEventId] = useState<number | null>(null);
   const [isContactFormOpen, setIsContactFormOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const {
     data: business,
     isLoading: businessLoading,
@@ -191,8 +260,50 @@ function BusinessProfile() {
     return startDate > now;
   });
 
-  // Determine event order based on customization setting
+  // Determine event display settings based on customization
   const showUpcomingFirst = business.show_upcoming_events_first ?? true;
+  const hidePastEvents = business.hide_past_events ?? false;
+  const eventsPerPage = business.events_per_page ?? 12;
+  const hideContactInfo = business.hide_contact_info ?? false;
+  const hideSocialLinks = business.hide_social_links ?? false;
+
+  // Get customization styles
+  const customStyle = generateCustomStyles(business);
+  const { backgroundStyle, overlayStyle, hasBackground } = getBackgroundStyles(business);
+
+  // Get secondary color for buttons
+  const secondaryButtonStyle = business.can_use_premium_customization && business.secondary_color
+    ? { backgroundColor: business.secondary_color, borderColor: business.secondary_color }
+    : undefined;
+
+  // Combine all displayable events for pagination
+  const displayableEvents = useMemo(() => {
+    const events: Event[] = [];
+    if (showUpcomingFirst) {
+      events.push(...presentEvents, ...futureEvents);
+      if (!hidePastEvents) {
+        events.push(...pastEvents);
+      }
+    } else {
+      if (!hidePastEvents) {
+        events.push(...pastEvents);
+      }
+      events.push(...presentEvents, ...futureEvents);
+    }
+    return events;
+  }, [presentEvents, futureEvents, pastEvents, showUpcomingFirst, hidePastEvents]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(displayableEvents.length / eventsPerPage);
+  const paginatedEvents = displayableEvents.slice(
+    (currentPage - 1) * eventsPerPage,
+    currentPage * eventsPerPage
+  );
+
+  // Reset to page 1 if events change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [businessId]);
 
   // Filter available events (future events that the business is NOT part of)
   const availableEvents = (
@@ -219,27 +330,22 @@ function BusinessProfile() {
     }
   };
 
-  // Apply custom primary color if available (overrides theme colors)
-  const customStyle = business.custom_primary_color && business.can_use_premium_customization
-    ? generatePrimaryColorVars(business.custom_primary_color)
-    : undefined
-
   return (
     <div
-      className="h-full bg-background relative"
-      style={customStyle}
+      className="h-full relative"
+      style={{ ...customStyle, ...backgroundStyle }}
     >
-      {/* Custom Background Image */}
-      {business.background_image_url && business.can_use_premium_customization && (
+      {/* Background Overlay for readability */}
+      {hasBackground && (
         <div
-          className="absolute inset-0 z-0 opacity-10"
-          style={{
-            backgroundImage: `url(${business.background_image_url})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}
+          className="absolute inset-0 z-0"
+          style={overlayStyle}
         />
+      )}
+
+      {/* Fallback background color when no custom background */}
+      {!hasBackground && (
+        <div className="absolute inset-0 z-0 bg-background" />
       )}
 
       <ScrollArea className="h-full relative z-10">
@@ -253,6 +359,20 @@ function BusinessProfile() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
+
+          {/* Header Banner */}
+          {business.header_banner && business.can_use_premium_customization && (
+            <div className="mb-6 rounded-lg overflow-hidden shadow-lg">
+              <img
+                src={business.header_banner}
+                alt={`${business.name} banner`}
+                className="w-full h-32 md:h-48 object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
 
           {/* Business Header */}
           <Card className="mb-6">
@@ -303,24 +423,30 @@ function BusinessProfile() {
 
                   {/* Contact Info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {business.contact_email && (
-                      <a
-                        href={`mailto:${business.contact_email}`}
-                        className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
-                      >
-                        <Mail className="h-4 w-4" />
-                        {business.contact_email}
-                      </a>
+                    {/* Email & Phone - hidden if hideContactInfo is true */}
+                    {!hideContactInfo && (
+                      <>
+                        {business.contact_email && (
+                          <a
+                            href={`mailto:${business.contact_email}`}
+                            className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                          >
+                            <Mail className="h-4 w-4" />
+                            {business.contact_email}
+                          </a>
+                        )}
+                        {business.contact_phone && (
+                          <a
+                            href={`tel:${business.contact_phone}`}
+                            className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                          >
+                            <Phone className="h-4 w-4" />
+                            {formatPhoneNumber(business.contact_phone)}
+                          </a>
+                        )}
+                      </>
                     )}
-                    {business.contact_phone && (
-                      <a
-                        href={`tel:${business.contact_phone}`}
-                        className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
-                      >
-                        <Phone className="h-4 w-4" />
-                        {formatPhoneNumber(business.contact_phone)}
-                      </a>
-                    )}
+                    {/* Website - always shown */}
                     {business.website && (
                       <a
                         href={business.website}
@@ -332,27 +458,32 @@ function BusinessProfile() {
                         Website
                       </a>
                     )}
-                    {business.instagram_url && (
-                      <a
-                        href={business.instagram_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
-                      >
-                        <Instagram className="h-4 w-4" />
-                        Instagram
-                      </a>
-                    )}
-                    {business.tiktok_url && (
-                      <a
-                        href={business.tiktok_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
-                      >
-                        <Video className="h-4 w-4" />
-                        TikTok
-                      </a>
+                    {/* Social Links - hidden if hideSocialLinks is true */}
+                    {!hideSocialLinks && (
+                      <>
+                        {business.instagram_url && (
+                          <a
+                            href={business.instagram_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                          >
+                            <Instagram className="h-4 w-4" />
+                            Instagram
+                          </a>
+                        )}
+                        {business.tiktok_url && (
+                          <a
+                            href={business.tiktok_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                          >
+                            <Video className="h-4 w-4" />
+                            TikTok
+                          </a>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -365,7 +496,7 @@ function BusinessProfile() {
             <div className="mb-6">
               <Dialog open={isContactFormOpen} onOpenChange={setIsContactFormOpen}>
                 <DialogTrigger asChild>
-                  <Button size="lg" className="gap-2">
+                  <Button size="lg" className="gap-2" style={secondaryButtonStyle}>
                     <MessageSquare className="h-5 w-5" />
                     Contact {business.name}
                   </Button>
@@ -478,20 +609,40 @@ function BusinessProfile() {
 
           {/* Events Section */}
           <div className="space-y-6">
-            {/* Present Events (Happening Now) */}
-            {presentEvents.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <h2 className={`text-2xl font-bold ${customStyle ? 'text-primary' : ''}`}>Happening Now</h2>
-                  <Badge variant="default" className="bg-green-600">
-                    {presentEvents.length}
-                  </Badge>
+            {/* Events Header */}
+            {displayableEvents.length > 0 && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className={`text-2xl font-bold ${customStyle ? 'text-primary' : ''}`}>Events</h2>
+                  <Badge variant="outline">{displayableEvents.length}</Badge>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {presentEvents.map((event) => (
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Event Cards Grid */}
+            {paginatedEvents.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {paginatedEvents.map((event) => {
+                  const eventStart = new Date(event.start_datetime);
+                  const eventEnd = new Date(event.end_datetime);
+                  const isHappeningNow = eventStart <= now && eventEnd >= now;
+                  const isPast = eventEnd < now;
+
+                  return (
                     <Card
                       key={event.id}
-                      className="border-2 border-green-500 hover:shadow-lg transition-shadow cursor-pointer"
+                      className={`hover:shadow-lg transition-all cursor-pointer ${
+                        isHappeningNow
+                          ? 'border-2 border-green-500'
+                          : isPast
+                          ? 'opacity-75 hover:opacity-100'
+                          : ''
+                      }`}
                       onClick={() => navigate(`/e/${event.id}`)}
                     >
                       {event.image && (
@@ -501,6 +652,26 @@ function BusinessProfile() {
                             alt={event.title}
                             className="w-full h-full object-cover"
                           />
+                          {isHappeningNow && (
+                            <Badge className="absolute top-2 right-2 bg-green-600">
+                              Happening Now
+                            </Badge>
+                          )}
+                          {isPast && (
+                            <Badge variant="secondary" className="absolute top-2 right-2">
+                              Past Event
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      {!event.image && (isHappeningNow || isPast) && (
+                        <div className="px-4 pt-4">
+                          {isHappeningNow && (
+                            <Badge className="bg-green-600">Happening Now</Badge>
+                          )}
+                          {isPast && (
+                            <Badge variant="secondary">Past Event</Badge>
+                          )}
                         </div>
                       )}
                       <CardHeader>
@@ -549,141 +720,59 @@ function BusinessProfile() {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             )}
 
-            {/* Future Events */}
-            {futureEvents.length > 0 && (
-              <>
-                {presentEvents.length > 0 && <Separator className="my-8" />}
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <h2 className={`text-2xl font-bold ${customStyle ? 'text-primary' : ''}`}>Upcoming Events</h2>
-                    <Badge variant="outline">{futureEvents.length}</Badge>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {futureEvents.map((event) => (
-                      <Card
-                        key={event.id}
-                        className="hover:shadow-lg transition-shadow cursor-pointer"
-                        onClick={() => navigate(`/e/${event.id}`)}
-                      >
-                        {event.image && (
-                          <div className="relative h-48 overflow-hidden rounded-t-lg">
-                            <img
-                              src={event.image}
-                              alt={event.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <CardHeader>
-                          <CardTitle className="line-clamp-2">
-                            {event.title}
-                          </CardTitle>
-                          {event.categories && event.categories.length > 0 && (
-                            <div className="flex gap-1.5 flex-wrap pt-2">
-                              {event.categories.map((category) => (
-                                <Badge
-                                  key={category}
-                                  variant="secondary"
-                                  className="text-xs"
-                                >
-                                  {category}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-start gap-2 text-muted-foreground">
-                              <Calendar className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <div>{formatDate(event.start_datetime)}</div>
-                                {formatDate(event.start_datetime) !==
-                                  formatDate(event.end_datetime) && (
-                                  <div>to {formatDate(event.end_datetime)}</div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Clock className="h-4 w-4 flex-shrink-0" />
-                              <span className="line-clamp-1">
-                                {formatTime(event.start_datetime)} -{' '}
-                                {formatTime(event.end_datetime)}
-                              </span>
-                            </div>
-                            <div className="flex items-start gap-2 text-muted-foreground">
-                              <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                              <span className="line-clamp-2">
-                                {event.address}
-                              </span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  style={secondaryButtonStyle}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? 'default' : 'outline'}
+                      size="sm"
+                      className="w-8 h-8 p-0"
+                      onClick={() => setCurrentPage(page)}
+                      style={page === currentPage ? secondaryButtonStyle : undefined}
+                    >
+                      {page}
+                    </Button>
+                  ))}
                 </div>
-              </>
-            )}
-
-            {/* Past Events */}
-            {pastEvents.length > 0 && (
-              <>
-                {(presentEvents.length > 0 || futureEvents.length > 0) && (
-                  <Separator className="my-8" />
-                )}
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <h2 className={`text-2xl font-bold ${customStyle ? 'text-primary' : ''}`}>Past Events</h2>
-                    <Badge variant="outline">{pastEvents.length}</Badge>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {pastEvents.map((event) => (
-                      <Card
-                        key={event.id}
-                        className="opacity-75 hover:opacity-100 transition-opacity cursor-pointer"
-                        onClick={() => navigate(`/e/${event.id}`)}
-                      >
-                        {event.image && (
-                          <div className="relative h-32 overflow-hidden rounded-t-lg">
-                            <img
-                              src={event.image}
-                              alt={event.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base line-clamp-2">
-                            {event.title}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-1 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-3 w-3" />
-                              <span>{formatDate(event.start_datetime)}</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              </>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  style={secondaryButtonStyle}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
             )}
 
             {/* No Events */}
-            {businessEvents.length === 0 && (
+            {displayableEvents.length === 0 && (
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-center text-muted-foreground">
-                    This business hasn't participated in any events yet.
+                    {hidePastEvents
+                      ? 'No upcoming events scheduled.'
+                      : "This business hasn't participated in any events yet."}
                   </p>
                 </CardContent>
               </Card>

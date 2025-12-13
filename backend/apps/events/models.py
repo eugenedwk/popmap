@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
+import uuid
 
 
 class Category(models.Model):
@@ -80,10 +81,48 @@ class Business(models.Model):
     )
 
     # Premium customization options (requires active subscription)
+    # Background options
+    background_image = models.ImageField(
+        upload_to='business_backgrounds/',
+        blank=True,
+        null=True,
+        help_text="Upload a custom background image (premium feature)"
+    )
     background_image_url = models.URLField(
         blank=True,
-        help_text="URL for custom background image (premium feature)"
+        help_text="URL for custom background image - alternative to upload (premium feature)"
     )
+    background_color = models.CharField(
+        max_length=7,
+        blank=True,
+        help_text="Custom background color in hex format, e.g., #1a1a2e (premium feature)"
+    )
+    background_overlay_opacity = models.IntegerField(
+        default=0,
+        help_text="Overlay opacity (0-100) for better text readability over background images (premium feature)"
+    )
+
+    # Branding colors
+    custom_primary_color = models.CharField(
+        max_length=7,
+        blank=True,
+        help_text="Custom primary color in hex format, e.g., #FF5733 (premium feature)"
+    )
+    secondary_color = models.CharField(
+        max_length=7,
+        blank=True,
+        help_text="Custom secondary/accent color for buttons and links, e.g., #3498db (premium feature)"
+    )
+
+    # Header banner
+    header_banner = models.ImageField(
+        upload_to='business_banners/',
+        blank=True,
+        null=True,
+        help_text="Banner image displayed at top of business page (premium feature)"
+    )
+
+    # Layout options
     default_view_mode = models.CharField(
         max_length=20,
         choices=[
@@ -94,14 +133,32 @@ class Business(models.Model):
         default='card',
         help_text="Default view mode for business page (premium feature)"
     )
-    custom_primary_color = models.CharField(
-        max_length=7,
-        blank=True,
-        help_text="Custom primary color in hex format, e.g., #FF5733 (premium feature)"
+    hide_contact_info = models.BooleanField(
+        default=False,
+        help_text="Hide email and phone from public page (premium feature)"
     )
+    hide_social_links = models.BooleanField(
+        default=False,
+        help_text="Hide Instagram and TikTok links from public page (premium feature)"
+    )
+
+    # Content display options
     show_upcoming_events_first = models.BooleanField(
         default=True,
         help_text="Show upcoming events before past events (premium feature)"
+    )
+    hide_past_events = models.BooleanField(
+        default=False,
+        help_text="Only show upcoming events, hide past events (premium feature)"
+    )
+    events_per_page = models.IntegerField(
+        default=12,
+        choices=[
+            (6, '6 events'),
+            (12, '12 events'),
+            (24, '24 events')
+        ],
+        help_text="Number of events to display per page (premium feature)"
     )
 
     is_verified = models.BooleanField(default=False)
@@ -398,3 +455,61 @@ class EventRSVP(models.Model):
         if self.user:
             return self.user.email
         return self.guest_email
+
+
+class GuestEmailPreference(models.Model):
+    """
+    Track email preferences for guest RSVPs (users without accounts).
+    Allows guests to opt-out of reminder emails via unsubscribe link.
+    """
+    email = models.EmailField(unique=True, db_index=True)
+    unsubscribe_token = models.UUIDField(default=uuid.uuid4, unique=True)
+    event_reminders_enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Guest Email Preference"
+        verbose_name_plural = "Guest Email Preferences"
+
+    def __str__(self):
+        status = "enabled" if self.event_reminders_enabled else "disabled"
+        return f"{self.email} (reminders {status})"
+
+
+class EventReminderLog(models.Model):
+    """
+    Track sent event reminders to prevent duplicate emails.
+    One record per RSVP per reminder type.
+    """
+    REMINDER_TYPE_CHOICES = [
+        ('24h', '24 Hours Before'),
+        ('1h', '1 Hour Before'),
+    ]
+
+    rsvp = models.ForeignKey(
+        EventRSVP,
+        on_delete=models.CASCADE,
+        related_name='reminder_logs'
+    )
+    reminder_type = models.CharField(
+        max_length=10,
+        choices=REMINDER_TYPE_CHOICES,
+        default='24h'
+    )
+    sent_at = models.DateTimeField(auto_now_add=True)
+    email_sent_to = models.EmailField()
+    success = models.BooleanField(default=True)
+    error_message = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "Event Reminder Log"
+        verbose_name_plural = "Event Reminder Logs"
+        unique_together = ['rsvp', 'reminder_type']
+        indexes = [
+            models.Index(fields=['rsvp', 'reminder_type']),
+            models.Index(fields=['sent_at']),
+        ]
+
+    def __str__(self):
+        return f"Reminder ({self.reminder_type}) for {self.rsvp} - {'sent' if self.success else 'failed'}"

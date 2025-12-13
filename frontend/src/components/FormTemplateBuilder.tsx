@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
 import { formsApi } from '@/services/api'
 import { Button } from '@/components/ui/button'
@@ -9,18 +10,21 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Plus, Trash2, GripVertical, Send, ArrowRight, Check, Sparkles, Mail, MessageSquare } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Send, ArrowRight, Check, Sparkles, Mail, MessageSquare, Loader2 } from 'lucide-react'
 import type { FormField, FormFieldOption, FormTemplateFormData } from '@/types'
 
 interface Props {
   businessId: number
+  templateId?: number
   onSave?: (templateId: number) => void
 }
 
-export function FormTemplateBuilder({ businessId, onSave }: Props) {
+export function FormTemplateBuilder({ businessId, templateId, onSave }: Props) {
   const { user } = useAuth()
   const navigate = useNavigate()
-  
+  const queryClient = useQueryClient()
+  const isEditMode = !!templateId
+
   const [formData, setFormData] = useState<FormTemplateFormData>({
     business: businessId,
     name: '',
@@ -31,6 +35,17 @@ export function FormTemplateBuilder({ businessId, onSave }: Props) {
     confirmation_message: '',
     submit_button_text: 'Submit',
     submit_button_icon: ''
+  })
+  const [isFormReady, setIsFormReady] = useState(!isEditMode)
+
+  // Fetch existing template when in edit mode
+  const { data: existingTemplate, isLoading: templateLoading } = useQuery({
+    queryKey: ['form-template', templateId],
+    queryFn: async () => {
+      const response = await formsApi.getTemplateById(templateId!)
+      return response.data
+    },
+    enabled: isEditMode,
   })
 
   // Available icons for button customization
@@ -57,8 +72,44 @@ export function FormTemplateBuilder({ businessId, onSave }: Props) {
   }
 
   const [fields, setFields] = useState<Partial<FormField>[]>([])
+  const [originalFieldIds, setOriginalFieldIds] = useState<number[]>([]) // Track original fields for deletion
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Populate form data when editing an existing template
+  useEffect(() => {
+    if (existingTemplate && isEditMode && !isFormReady) {
+      setFormData({
+        business: businessId,
+        name: existingTemplate.name || '',
+        title: existingTemplate.title || '',
+        description: existingTemplate.description || '',
+        notification_email: existingTemplate.notification_email || '',
+        send_confirmation_to_submitter: existingTemplate.send_confirmation_to_submitter || false,
+        confirmation_message: existingTemplate.confirmation_message || '',
+        submit_button_text: existingTemplate.submit_button_text || 'Submit',
+        submit_button_icon: existingTemplate.submit_button_icon || ''
+      })
+
+      // Set fields from existing template
+      const existingFields = existingTemplate.fields || []
+      setFields(existingFields.map((f: FormField) => ({
+        id: f.id,
+        field_type: f.field_type,
+        label: f.label,
+        placeholder: f.placeholder || '',
+        help_text: f.help_text || '',
+        is_required: f.is_required,
+        order: f.order,
+        options: f.options || []
+      })))
+
+      // Track original field IDs for deletion detection
+      setOriginalFieldIds(existingFields.map((f: FormField) => f.id))
+
+      setIsFormReady(true)
+    }
+  }, [existingTemplate, isEditMode, isFormReady, businessId])
 
   const addField = () => {
     setFields([...fields, {
@@ -134,22 +185,61 @@ export function FormTemplateBuilder({ businessId, onSave }: Props) {
         }
       }
 
-      // Create form template
-      const response = await formsApi.createTemplate(formData)
-      const template = response.data
+      let finalTemplateId: number
 
-      // Create fields
-      for (const field of fields) {
-        await formsApi.createField({
-          ...field,
-          form_template: template.id
-        })
+      if (isEditMode && templateId) {
+        // UPDATE MODE
+        // Update the template
+        await formsApi.updateTemplate(templateId, formData)
+        finalTemplateId = templateId
+
+        // Get current field IDs from state
+        const currentFieldIds = fields
+          .filter(f => f.id !== undefined)
+          .map(f => f.id as number)
+
+        // Delete removed fields (fields that were in original but not in current)
+        const fieldsToDelete = originalFieldIds.filter(id => !currentFieldIds.includes(id))
+        for (const fieldId of fieldsToDelete) {
+          await formsApi.deleteField(fieldId)
+        }
+
+        // Update or create fields
+        for (let i = 0; i < fields.length; i++) {
+          const field = fields[i]
+          const fieldData = { ...field, form_template: templateId, order: i }
+
+          if (field.id) {
+            // Update existing field
+            await formsApi.updateField(field.id, fieldData)
+          } else {
+            // Create new field
+            await formsApi.createField(fieldData)
+          }
+        }
+
+        // Invalidate cache
+        queryClient.invalidateQueries({ queryKey: ['form-template', templateId] })
+        queryClient.invalidateQueries({ queryKey: ['form-templates'] })
+      } else {
+        // CREATE MODE
+        const response = await formsApi.createTemplate(formData)
+        const template = response.data
+        finalTemplateId = template.id
+
+        // Create fields
+        for (const field of fields) {
+          await formsApi.createField({
+            ...field,
+            form_template: template.id
+          })
+        }
       }
 
       if (onSave) {
-        onSave(template.id)
+        onSave(finalTemplateId)
       } else {
-        navigate(`/forms/${template.id}`)
+        navigate(`/forms/${finalTemplateId}`)
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to save form')
@@ -158,11 +248,20 @@ export function FormTemplateBuilder({ businessId, onSave }: Props) {
     }
   }
 
+  // Show loading state in edit mode
+  if (isEditMode && (templateLoading || !isFormReady)) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Create Form Template</CardTitle>
+          <CardTitle>{isEditMode ? 'Edit Form Template' : 'Create Form Template'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {error && (
@@ -446,7 +545,7 @@ export function FormTemplateBuilder({ businessId, onSave }: Props) {
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Form Template'}
+              {saving ? 'Saving...' : (isEditMode ? 'Save Changes' : 'Save Form Template')}
             </Button>
           </div>
         </CardContent>

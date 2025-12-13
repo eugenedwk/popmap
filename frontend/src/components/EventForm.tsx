@@ -1,8 +1,9 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useParams, useNavigate } from 'react-router-dom'
 import { APIProvider } from '@vis.gl/react-google-maps'
 import { eventsApi, businessesApi, formsApi } from '../services/api'
 import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete'
@@ -77,11 +78,30 @@ const eventSchema = z.object({
   path: ['recurrence_count'],
 })
 
-function EventFormContent() {
-  const [selectedBusinesses, setSelectedBusinesses] = useState([])
-  const [submitStatus, setSubmitStatus] = useState(null) // 'success' | 'error' | null
-  const [selectedPlace, setSelectedPlace] = useState(null)
+interface EventFormContentProps {
+  eventId?: number
+}
+
+function EventFormContent({ eventId }: EventFormContentProps) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const isEditMode = !!eventId
+
+  const [selectedBusinesses, setSelectedBusinesses] = useState<number[]>([])
+  const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
+  const [selectedPlace, setSelectedPlace] = useState<{ address: string; latitude: number; longitude: number } | null>(null)
   const [businessSearch, setBusinessSearch] = useState('')
+  const [isFormReady, setIsFormReady] = useState(!isEditMode) // Ready immediately for create, wait for data in edit
+
+  // Fetch existing event data when in edit mode
+  const { data: existingEvent, isLoading: eventLoading } = useQuery({
+    queryKey: ['event', eventId],
+    queryFn: async () => {
+      const response = await eventsApi.getById(eventId!)
+      return response.data
+    },
+    enabled: isEditMode,
+  })
 
   const { data: businesses, isLoading: businessesLoading } = useQuery({
     queryKey: ['businesses'],
@@ -104,14 +124,24 @@ function EventFormContent() {
   })
 
   const mutation = useMutation({
-    mutationFn: (data) => eventsApi.create(data),
+    mutationFn: (data: any) => isEditMode ? eventsApi.update(eventId!, data) : eventsApi.create(data),
     onSuccess: () => {
       setSubmitStatus('success')
       analytics.trackFormSubmit('event', true)
-      form.reset()
-      setSelectedBusinesses([])
-      setSelectedPlace(null)
-      setBusinessSearch('')
+
+      // Invalidate relevant queries
+      if (isEditMode) {
+        queryClient.invalidateQueries({ queryKey: ['event', eventId] })
+      }
+      queryClient.invalidateQueries({ queryKey: ['my-events'] })
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+
+      if (!isEditMode) {
+        form.reset()
+        setSelectedBusinesses([])
+        setSelectedPlace(null)
+        setBusinessSearch('')
+      }
     },
     onError: () => {
       setSubmitStatus('error')
@@ -141,6 +171,58 @@ function EventFormContent() {
       form_template: undefined,
     },
   })
+
+  // Populate form with existing event data when editing
+  useEffect(() => {
+    if (existingEvent && isEditMode && !isFormReady) {
+      // Parse datetime strings to extract date and time
+      const startDate = existingEvent.start_datetime.split('T')[0]
+      const startTime = existingEvent.start_datetime.split('T')[1]?.substring(0, 5) || ''
+      const endDate = existingEvent.end_datetime.split('T')[0]
+      const endTime = existingEvent.end_datetime.split('T')[1]?.substring(0, 5) || ''
+
+      // Check if multi-day event (different dates)
+      const isMultiDayEvent = startDate !== endDate
+
+      // Get business IDs from existing event
+      const businessIds = existingEvent.businesses?.map((b: any) => b.id) || []
+
+      // Set form values
+      form.reset({
+        title: existingEvent.title || '',
+        description: existingEvent.description || '',
+        cta_button_text: existingEvent.cta_button_text || '',
+        cta_button_url: existingEvent.cta_button_url || '',
+        require_login_for_rsvp: existingEvent.require_login_for_rsvp ?? true,
+        address: existingEvent.address || '',
+        latitude: existingEvent.latitude?.toString() || '',
+        longitude: existingEvent.longitude?.toString() || '',
+        event_date: startDate,
+        end_date: isMultiDayEvent ? endDate : '',
+        start_time: startTime,
+        end_time: endTime,
+        is_multi_day: isMultiDayEvent,
+        is_recurring: false, // Can't edit recurring settings on existing events
+        recurrence_count: '1',
+        business_ids: businessIds,
+        form_template: existingEvent.form_template || undefined,
+      })
+
+      // Set selected businesses state
+      setSelectedBusinesses(businessIds)
+
+      // Set selected place for display
+      if (existingEvent.address && existingEvent.latitude && existingEvent.longitude) {
+        setSelectedPlace({
+          address: existingEvent.address,
+          latitude: existingEvent.latitude,
+          longitude: existingEvent.longitude,
+        })
+      }
+
+      setIsFormReady(true)
+    }
+  }, [existingEvent, isEditMode, isFormReady, form])
 
   // Watch the is_multi_day and is_recurring fields to show/hide options
   const isMultiDay = form.watch('is_multi_day')
@@ -216,7 +298,7 @@ function EventFormContent() {
     return businesses.filter(b => selectedBusinesses.includes(b.id))
   }, [businesses, selectedBusinesses])
 
-  if (businessesLoading) {
+  if (businessesLoading || (isEditMode && (eventLoading || !isFormReady))) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -228,9 +310,11 @@ function EventFormContent() {
     <div className="max-w-3xl mx-auto p-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Submit a Popup Event</CardTitle>
+          <CardTitle className="text-2xl">{isEditMode ? 'Edit Event' : 'Submit a Popup Event'}</CardTitle>
           <CardDescription>
-            Submit your popup event for review. Once approved, it will appear on the map.
+            {isEditMode
+              ? 'Update your event details below.'
+              : 'Submit your popup event for review. Once approved, it will appear on the map.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -240,7 +324,9 @@ function EventFormContent() {
               <div>
                 <h3 className="font-semibold text-green-900">Success!</h3>
                 <p className="text-sm text-green-800">
-                  Your event has been submitted for review. We'll notify you once it's approved.
+                  {isEditMode
+                    ? 'Your event has been updated successfully.'
+                    : "Your event has been submitted for review. We'll notify you once it's approved."}
                 </p>
               </div>
             </div>
@@ -697,7 +783,7 @@ function EventFormContent() {
 
               <Button type="submit" className="w-full" disabled={mutation.isPending}>
                 {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit Event for Review
+                {isEditMode ? 'Update Event' : 'Submit Event for Review'}
               </Button>
             </form>
           </Form>
@@ -709,6 +795,9 @@ function EventFormContent() {
 
 // Wrapper component that provides Google Maps API
 function EventForm() {
+  const { eventId: eventIdParam } = useParams<{ eventId: string }>()
+  const eventId = eventIdParam ? parseInt(eventIdParam, 10) : undefined
+
   if (!GOOGLE_MAPS_API_KEY) {
     return (
       <div className="max-w-3xl mx-auto p-6">
@@ -731,7 +820,7 @@ function EventForm() {
 
   return (
     <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-      <EventFormContent />
+      <EventFormContent eventId={eventId} />
     </APIProvider>
   )
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import Sidebar from './components/Sidebar';
 import MobileNavigation from './components/MobileNavigation';
@@ -28,7 +29,49 @@ import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
 import { trackPageView, analytics } from './lib/analytics';
 import { isOnSubdomain, getMainSiteLink } from './lib/subdomain';
+import { formsApi } from './services/api';
+import { Loader2 } from 'lucide-react';
 import logo from './noun-cafe-4738717-007435.png';
+
+// Wrapper component for editing form templates
+// Fetches the template to get the businessId, then renders FormTemplateBuilder
+function FormTemplateEditWrapper() {
+  const { templateId } = useParams<{ templateId: string }>();
+  const navigate = useNavigate();
+
+  const { data: template, isLoading, error } = useQuery({
+    queryKey: ['form-template', templateId],
+    queryFn: async () => {
+      const response = await formsApi.getTemplateById(parseInt(templateId!));
+      return response.data;
+    },
+    enabled: !!templateId,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error || !template) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-destructive">Failed to load form template</p>
+      </div>
+    );
+  }
+
+  return (
+    <FormTemplateBuilder
+      businessId={template.business}
+      templateId={parseInt(templateId!)}
+      onSave={() => navigate(`/business/${template.business}/dashboard?tab=forms`)}
+    />
+  );
+}
 
 type ViewType =
   | 'list'
@@ -197,6 +240,8 @@ function AppContent() {
 
           {/* Form Builder Routes - Full screen, no sidebar, scrollable */}
           <Route path="/forms/:templateId/submissions" element={<div className="flex-1 overflow-auto"><FormSubmissionsList /></div>} />
+          <Route path="/forms/:templateId/edit" element={<div className="flex-1 overflow-auto"><FormTemplateEditWrapper /></div>} />
+          <Route path="/e/:eventId/edit" element={<div className="flex-1 overflow-auto"><EventForm /></div>} />
           <Route path="/business/:businessId/dashboard" element={<div className="flex-1 overflow-auto"><BusinessDashboard /></div>} />
           <Route path="/business" element={<div className="flex-1 overflow-auto"><BusinessOwnerHub /></div>} />
           <Route path="/billing" element={<div className="flex-1 overflow-auto"><BillingPage /></div>} />

@@ -1,0 +1,132 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block title %}Create copies for multiple dates{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='events' %}">Events</a>
+    &rsaquo; <a href="{% url 'admin:events_event_changelist' %}">Events</a>
+    &rsaquo; Create copies for multiple dates
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>Create copies of "{{ event.title }}" for multiple dates</h1>
+
+<p>This will create duplicate events with the same details but different dates. The original event will remain unchanged.</p>
+
+<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+    <strong>Original Event:</strong><br>
+    <strong>Title:</strong> {{ event.title }}<br>
+    <strong>Location:</strong> {{ event.address }}<br>
+    <strong>Original Date:</strong> {{ event.start_datetime|date:"l, F j, Y" }} at {{ event.start_datetime|time:"g:i A" }} - {{ event.end_datetime|time:"g:i A" }}<br>
+    <strong>Duration:</strong> {{ duration_hours }} hour(s) {{ duration_minutes }} minute(s)
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="event_id" value="{{ event.id }}">
+
+    <fieldset class="module aligned">
+        <h2>Select dates for new copies</h2>
+
+        <div class="form-row">
+            <label for="dates">Dates (one per line):</label>
+            <div>
+                <textarea name="dates" id="dates" rows="10" cols="40" style="font-family: monospace;" placeholder="2024-12-14
+2024-12-15
+2024-12-21
+2024-12-22"></textarea>
+                <p class="help">Enter dates in YYYY-MM-DD format, one per line. Each date will create a copy of the event with the same start/end times.</p>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <label>Quick select:</label>
+            <div>
+                <button type="button" onclick="addNextWeekend()" class="button" style="margin-right: 10px;">Add next weekend (Sat/Sun)</button>
+                <button type="button" onclick="addNextFourWeekends()" class="button">Add next 4 weekends</button>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <label for="copy_status">Status for copies:</label>
+            <div>
+                <select name="copy_status" id="copy_status">
+                    <option value="approved" selected>Approved</option>
+                    <option value="pending">Pending Review</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <label for="title_suffix">Title suffix (optional):</label>
+            <div>
+                <input type="text" name="title_suffix" id="title_suffix" placeholder=" - Weekend Edition">
+                <p class="help">Optional text to append to the title of each copy. Leave empty to keep the same title.</p>
+            </div>
+        </div>
+    </fieldset>
+
+    <div class="submit-row">
+        <input type="submit" value="Create copies" class="default">
+        <a href="{% url 'admin:events_event_changelist' %}" class="button cancel-link">Cancel</a>
+    </div>
+</form>
+
+<script>
+function getNextWeekend() {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7;
+
+    const saturday = new Date(today);
+    saturday.setDate(today.getDate() + daysUntilSaturday);
+
+    const sunday = new Date(saturday);
+    sunday.setDate(saturday.getDate() + 1);
+
+    return [saturday, sunday];
+}
+
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function addNextWeekend() {
+    const [saturday, sunday] = getNextWeekend();
+    const textarea = document.getElementById('dates');
+    const currentValue = textarea.value.trim();
+    const newDates = formatDate(saturday) + '\n' + formatDate(sunday);
+    textarea.value = currentValue ? currentValue + '\n' + newDates : newDates;
+}
+
+function addNextFourWeekends() {
+    const textarea = document.getElementById('dates');
+    const currentValue = textarea.value.trim();
+    let dates = [];
+
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    let daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7;
+
+    for (let i = 0; i < 4; i++) {
+        const saturday = new Date(today);
+        saturday.setDate(today.getDate() + daysUntilSaturday + (i * 7));
+
+        const sunday = new Date(saturday);
+        sunday.setDate(saturday.getDate() + 1);
+
+        dates.push(formatDate(saturday));
+        dates.push(formatDate(sunday));
+    }
+
+    textarea.value = currentValue ? currentValue + '\n' + dates.join('\n') : dates.join('\n');
+}
+</script>
+{% endblock %}

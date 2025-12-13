@@ -25,10 +25,25 @@ export interface Business {
   subdomain_url?: string | null
   active_form_template?: FormTemplate | null
   active_form_template_id?: number | null
+  // Background options
+  background_image?: string
   background_image_url?: string
-  default_view_mode?: 'map' | 'list' | 'card'
+  background_color?: string
+  background_overlay_opacity?: number
+  // Branding colors
   custom_primary_color?: string
+  secondary_color?: string
+  // Header banner
+  header_banner?: string
+  // Layout options
+  default_view_mode?: 'map' | 'list' | 'card'
+  hide_contact_info?: boolean
+  hide_social_links?: boolean
+  // Content display options
   show_upcoming_events_first?: boolean
+  hide_past_events?: boolean
+  events_per_page?: 6 | 12 | 24
+  // Metadata
   is_verified: boolean
   created_at: string
 }
@@ -360,4 +375,15 @@ export interface EventDetailAnalytics {
   referrers: Record<string, number>
   interactions: Record<string, number>
   daily_views: DailyViewData[]
+}
+
+// Notification Preferences types
+export interface NotificationPreferences {
+  email_notifications_enabled: boolean
+  event_reminder_enabled: boolean
+}
+
+export interface GuestUnsubscribeResponse {
+  message: string
+  email: string
 }
