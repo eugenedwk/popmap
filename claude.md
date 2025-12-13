@@ -174,18 +174,32 @@
   - Frontend: Placeholder for future verified attendance badges
 
 ### 13. Business page customization options (PREMIUM)
-- **Status**: Pending
+- **Status**: Completed
 - **Type**: Feature - Premium Business Tools
 - **Description**: Allow paying businesses to customize their page appearance
-- **Dependencies**: Requires active subscription (Task #9)
+- **Dependencies**: ✅ Requires active subscription (Task #9) - COMPLETED
 - **Implementation**:
-  - Backend: Business model fields (background_image, default_view_mode)
-  - Backend: Subscription check for customization access
-  - Frontend: BusinessPageSettings component (premium only)
-  - Frontend: Background image upload/URL input
-  - Frontend: Toggle between map view and date/list view
-  - Frontend: Save preferences per business
-  - Frontend: Upgrade prompt for non-subscribed businesses
+  - ✅ Backend: Business model fields for customization
+    - Background: image upload, URL, color, overlay opacity
+    - Branding: primary color, secondary color, header banner
+    - Layout: default view mode, hide contact info, hide social links
+    - Content: show upcoming first, hide past events, events per page
+  - ✅ Backend: can_use_premium_customization() subscription check
+  - ✅ Backend: Serializer validation for premium fields
+  - ✅ Frontend: BusinessPageSettings component with tabbed UI
+  - ✅ Frontend: Background image upload and URL input
+  - ✅ Frontend: Color pickers with live preview
+  - ✅ Frontend: Slider for overlay opacity
+  - ✅ Frontend: Upgrade prompt for non-subscribed businesses
+- **Files Modified**:
+  - `backend/apps/events/models.py` - Added 9 new customization fields
+  - `backend/apps/events/serializers.py` - Added fields and validation
+  - `backend/apps/events/admin.py` - Added Page Customization fieldset + event duplication actions
+  - `backend/apps/events/migrations/0016_add_business_page_customizations.py`
+  - `backend/apps/events/templates/admin/events/multi_date_copy.html` - Multi-date copy form
+  - `frontend/src/types/index.ts` - Updated Business interface
+  - `frontend/src/components/BusinessPageSettings.tsx` - Full rewrite with tabs
+  - `frontend/src/components/ui/slider.tsx` - New UI component
 
 ### 14. Mobile responsive sidebar and layout
 - **Status**: Completed
@@ -297,9 +311,9 @@ Tasks 1-3 are independent and provide immediate value. Start here to build momen
 All Phase 3 tasks (8-10) have been completed and are ready for production deployment. Stripe configuration and DNS setup required for full activation.
 
 **Phase 4 Progress:**
-- ✅ Tasks 11 and 14 completed (custom map pins and mobile responsive layout)
-- Tasks 12, 13, 15, 16 pending
-- Tasks 13, 15, 16 depend on subscription system (Task #9)
+- ✅ Tasks 11, 13, and 14 completed (custom map pins, business page customization, mobile responsive layout)
+- Tasks 12, 15, 16 pending
+- Tasks 15, 16 depend on subscription system (Task #9)
 
 **Phase 5 - Exploration:**
 New exploration tasks for future consideration:
@@ -307,7 +321,7 @@ New exploration tasks for future consideration:
 - Task 18: Instagram hashtag feed embedding
 - Task 19: Geofenced check-in system (builds on Task #12)
 
-**Last Updated**: 2025-12-03
+**Last Updated**: 2025-12-12
 
 ---
 
@@ -472,3 +486,77 @@ Define retention periods for:
 6. **Review AWS/Stripe DPAs** to ensure compliance
 7. **Implement data export endpoint** (user right to access)
 8. **Create cookie consent banner** if using analytics/tracking
+
+---
+
+## Admin TUI Dashboard
+
+A terminal-based admin dashboard built with [Textual](https://textual.textualize.io/) for managing PopMap data directly from the command line.
+
+### Usage
+
+```bash
+# Launch the TUI
+cd backend
+python manage.py tui
+
+# Read-only mode (no modifications allowed)
+python manage.py tui --readonly
+```
+
+### Features
+
+| Screen | Description | Key Actions |
+|--------|-------------|-------------|
+| Dashboard | Overview with stats, pending events | Quick approve/reject |
+| Events | Event listing with CRUD | Approve, Reject, Delete |
+| Businesses | Business management | Toggle verified, Delete |
+| Users | User listing | Gift subscription |
+| Subscriptions | Subscription management | Cancel subscription |
+| Analytics | View-only metrics | Period selection (7/30/90 days) |
+
+### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `D` | Dashboard screen |
+| `E` | Events screen |
+| `B` | Businesses screen |
+| `U` | Users screen |
+| `S` | Subscriptions screen |
+| `A` | Analytics screen |
+| `Q` | Quit |
+| `?` | Help |
+| `F5` | Refresh current screen |
+| `N/P` | Next/Previous page |
+| `Enter` | View details |
+| `G` | Gift subscription (Users screen) |
+| `V` | Toggle verified (Businesses screen) |
+
+### Files Structure
+
+```
+backend/apps/admin_tui/
+├── management/commands/tui.py    # Entry point
+└── tui/
+    ├── app.py                    # Main Textual App
+    ├── styles.tcss               # CSS styles
+    ├── screens/                  # Screen components
+    │   ├── dashboard.py
+    │   ├── events.py
+    │   ├── businesses.py
+    │   ├── users.py
+    │   ├── subscriptions.py
+    │   └── analytics.py
+    ├── widgets/                  # Reusable widgets
+    │   ├── stat_card.py
+    │   ├── filter_bar.py
+    │   └── modals.py
+    └── services/
+        └── data_service.py       # Django ORM wrapper
+```
+
+### Dependencies
+
+- `textual>=0.47.0` - TUI framework
+- `rich>=13.7.0` - Rich text rendering
