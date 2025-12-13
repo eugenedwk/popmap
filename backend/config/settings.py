@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'apps.billing',
     'apps.forms',
     'apps.analytics',
+    'apps.admin_tui',
 ]
 
 MIDDLEWARE = [
@@ -151,8 +152,9 @@ CORS_ALLOWED_ORIGINS = config(
 )
 
 # Allow all subdomains of popmap.co (for custom business subdomains)
+# Also allow the main domain popmap.co itself
 CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https://.*\.popmap\.co$",  # Match any subdomain like tomo.popmap.co
+    r"^https://(.*\.)?popmap\.co$",  # Match popmap.co and any subdomain like tomo.popmap.co
 ]
 
 # CSRF settings for production
