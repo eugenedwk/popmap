@@ -32,3 +32,6 @@ cryptography==44.0.0
 stripe==12.0.0
 # Google Maps geocoding
 googlemaps==4.10.0
+# TUI Admin Dashboard
+textual>=0.47.0
+rich>=13.7.0

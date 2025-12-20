@@ -1,0 +1,197 @@
+/* PopMap Admin TUI Styles */
+/* Theme based on PopMap branding: Dark Green (#166534) */
+
+/* Global Styles */
+Screen {
+    background: $surface;
+}
+
+Header {
+    background: #166534;
+    color: white;
+}
+
+Footer {
+    background: $surface-darken-1;
+}
+
+/* DataTable Styles */
+DataTable {
+    border: solid $primary;
+    background: $surface;
+}
+
+DataTable > .datatable--cursor {
+    background: #166534 30%;
+}
+
+DataTable > .datatable--header {
+    background: $surface-darken-1;
+    text-style: bold;
+}
+
+/* Stat Card Styles */
+StatCard {
+    width: 1fr;
+    height: auto;
+    min-height: 5;
+    border: solid #166534;
+    padding: 1 2;
+    margin: 0 1;
+    background: $surface-darken-1;
+}
+
+StatCard:hover {
+    border: solid #22c55e;
+}
+
+StatCard .stat-title {
+    color: $text-muted;
+    text-style: bold;
+    text-align: center;
+}
+
+StatCard .stat-value {
+    color: #22c55e;
+    text-style: bold;
+    text-align: center;
+}
+
+StatCard .stat-subtitle {
+    color: $text-muted;
+    text-align: center;
+}
+
+/* Filter Bar Styles */
+FilterBar {
+    background: $surface-darken-1;
+    border-bottom: solid $primary;
+    padding: 1;
+}
+
+FilterBar Input {
+    width: 30;
+}
+
+FilterBar Select {
+    width: 20;
+}
+
+FilterBar Button {
+    margin-left: 1;
+}
+
+FilterBar .new-button {
+    background: #166534;
+}
+
+/* Modal Styles */
+ConfirmModal > Vertical,
+FormModal > Vertical,
+GiftSubscriptionModal > Vertical {
+    background: $surface;
+    border: thick #166534;
+    padding: 1 2;
+}
+
+ConfirmModal .modal-title,
+FormModal .modal-title,
+GiftSubscriptionModal .modal-title {
+    text-style: bold;
+    color: #22c55e;
+}
+
+/* Button Styles */
+Button {
+    margin: 0 1;
+}
+
+Button.-primary {
+    background: #166534;
+}
+
+Button.-success {
+    background: #166534;
+}
+
+Button.-error {
+    background: #dc2626;
+}
+
+/* Section Styles */
+.section-title {
+    text-style: bold;
+    color: #22c55e;
+    padding: 1;
+    background: $surface-darken-1;
+}
+
+/* Detail Panel Styles */
+.detail-section {
+    background: $surface-darken-1;
+}
+
+.detail-content {
+    padding: 1;
+}
+
+/* Page Info */
+.page-info {
+    color: $text-muted;
+    text-align: right;
+    padding: 0 1;
+}
+
+/* Status Badges */
+.status-pending {
+    color: #f59e0b;
+}
+
+.status-approved {
+    color: #22c55e;
+}
+
+.status-rejected {
+    color: #ef4444;
+}
+
+.status-cancelled {
+    color: $text-muted;
+}
+
+/* Scrollable Container */
+ScrollableContainer {
+    scrollbar-gutter: stable;
+}
+
+/* Help Text */
+.help-text {
+    color: $text-muted;
+    text-style: italic;
+}
+
+/* User Info in Modals */
+.user-info {
+    background: $surface-darken-2;
+    padding: 1;
+    margin-bottom: 1;
+}
+
+/* Plans Section */
+.plans-section {
+    border-top: solid $primary;
+    padding: 1;
+}
+
+/* Top Lists */
+.top-list {
+    border: solid $primary;
+    padding: 1;
+    margin: 0 1;
+}
+
+/* Interactions Section */
+.interactions-section {
+    border: solid $primary;
+    padding: 1;
+}
