@@ -1,0 +1,27 @@
+Hi {{ recipient_name }},
+
+Just a friendly reminder that you're going to an event tomorrow!
+
+========================================
+{{ event_title }}
+========================================
+
+Date: {{ event_date }}
+Time: {{ event_time }}
+Location: {{ event_location }}{% if location_name %} ({{ location_name }}){% endif %}
+
+{% if businesses %}Featuring: {{ businesses|join:", " }}{% endif %}
+
+{% if event_description %}
+{{ event_description|truncatewords:50 }}
+{% endif %}
+
+View event details: {{ event_url }}
+
+---
+See you there!
+The PopMap Team
+
+{% if unsubscribe_url %}
+Don't want event reminders? Unsubscribe: {{ unsubscribe_url }}
+{% endif %}
