@@ -177,6 +177,7 @@ const Map = forwardRef<MapLibreMap | null, MapProps>(function Map(
   const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isStyleLoaded, setIsStyleLoaded] = useState(false);
+  const [webGLError, setWebGLError] = useState<string | null>(null);
   const currentStyleRef = useRef<string | StyleSpecification | null>(null);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
 
@@ -206,31 +207,50 @@ const Map = forwardRef<MapLibreMap | null, MapProps>(function Map(
     const initialStyle = resolvedTheme === "dark" ? mapStyles.dark : mapStyles.light;
     currentStyleRef.current = initialStyle;
 
-    const map = new MapLibreGL.Map({
-      container: containerRef.current,
-      style: initialStyle,
-      renderWorldCopies: false,
-      attributionControl: {
-        compact: true,
-      },
-      ...props,
-    });
+    let map: MapLibreMap | null = null;
 
-    const styleDataHandler = () => setIsStyleLoaded(true);
-    const loadHandler = () => setIsLoaded(true);
+    try {
+      map = new MapLibreGL.Map({
+        container: containerRef.current,
+        style: initialStyle,
+        renderWorldCopies: false,
+        attributionControl: {
+          compact: true,
+        },
+        ...props,
+      });
 
-    map.on("load", loadHandler);
-    map.on("styledata", styleDataHandler);
-    setMapInstance(map);
+      const styleDataHandler = () => setIsStyleLoaded(true);
+      const loadHandler = () => setIsLoaded(true);
+      const errorHandler = (e: { error?: { message?: string } }) => {
+        if (e.error?.message?.includes('WebGL')) {
+          setWebGLError('WebGL is not available in your browser. Please enable hardware acceleration in your browser settings.');
+        }
+      };
 
-    return () => {
-      map.off("load", loadHandler);
-      map.off("styledata", styleDataHandler);
-      map.remove();
-      setIsLoaded(false);
-      setIsStyleLoaded(false);
-      setMapInstance(null);
-    };
+      map.on("load", loadHandler);
+      map.on("styledata", styleDataHandler);
+      map.on("error", errorHandler);
+      setMapInstance(map);
+
+      return () => {
+        map?.off("load", loadHandler);
+        map?.off("styledata", styleDataHandler);
+        map?.off("error", errorHandler);
+        map?.remove();
+        setIsLoaded(false);
+        setIsStyleLoaded(false);
+        setMapInstance(null);
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('WebGL') || errorMessage.includes('webgl')) {
+        setWebGLError('WebGL is not available in your browser. Please enable hardware acceleration in your browser settings.');
+      } else {
+        setWebGLError(`Failed to initialize map: ${errorMessage}`);
+      }
+      return () => {};
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -257,6 +277,30 @@ const Map = forwardRef<MapLibreMap | null, MapProps>(function Map(
     map: mapInstance,
     isLoaded: isLoaded && isStyleLoaded,
   }), [mapInstance, isLoaded, isStyleLoaded]);
+
+  // Show fallback UI if WebGL is not available
+  if (webGLError) {
+    return (
+      <div className={cn("relative w-full h-full bg-muted flex items-center justify-center", className)}>
+        <div className="max-w-md p-6 text-center">
+          <div className="mb-4 text-muted-foreground">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto">
+              <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Map Unavailable</h3>
+          <p className="text-sm text-muted-foreground mb-4">{webGLError}</p>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p><strong>To fix this:</strong></p>
+            <p>1. Go to chrome://settings/system</p>
+            <p>2. Enable "Use hardware acceleration"</p>
+            <p>3. Restart your browser</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <MapContext.Provider value={contextValue}>
