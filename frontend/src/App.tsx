@@ -7,6 +7,7 @@ import MobileNavigation from './components/MobileNavigation';
 import ListView from './components/ListView';
 import CardView from './components/CardView';
 import MapView from './components/MapView';
+import { LandingPage } from './components/LandingPage';
 import BusinessForm from './components/BusinessForm';
 import EventForm from './components/EventForm';
 import BusinessProfile from './components/BusinessProfile';
@@ -139,7 +140,14 @@ function AppContent() {
       case 'cards':
         return <CardView onBusinessClick={handleBusinessClick} />;
       case 'map':
-        return <MapView onBusinessClick={handleBusinessClick} />;
+        return (
+          <div className="flex flex-col">
+            <div className="h-[calc(100vh-80px)] md:h-[calc(100vh-80px)] min-h-[400px]">
+              <MapView onBusinessClick={handleBusinessClick} />
+            </div>
+            <LandingPage />
+          </div>
+        );
       case 'brands':
         return <BrandsView onBusinessClick={handleBusinessClick} />;
       case 'submit-business':
@@ -147,7 +155,14 @@ function AppContent() {
       case 'submit-event':
         return <EventForm />;
       default:
-        return <MapView onBusinessClick={handleBusinessClick} />;
+        return (
+          <div className="flex flex-col">
+            <div className="h-[calc(100vh-80px)] md:h-[calc(100vh-80px)] min-h-[400px]">
+              <MapView onBusinessClick={handleBusinessClick} />
+            </div>
+            <LandingPage />
+          </div>
+        );
     }
   };
 

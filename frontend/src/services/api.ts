@@ -21,7 +21,11 @@ import type {
   EventRSVP,
   AnalyticsOverview,
   EventAnalytics,
-  EventDetailAnalytics
+  EventDetailAnalytics,
+  NotificationPreferences,
+  GuestUnsubscribeResponse,
+  Venue,
+  VenueFormData
 } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -184,6 +188,19 @@ export const eventsApi = {
     apiClient.get(`/events/${eventId}/check_guest_rsvp/`, { params: { email } }),
 }
 
+export const venuesApi = {
+  getAll: (): Promise<AxiosResponse<Venue[]>> => apiClient.get('/venues/'),
+  getById: (id: number): Promise<AxiosResponse<Venue>> => apiClient.get(`/venues/${id}/`),
+  getForBusiness: (businessId: number): Promise<AxiosResponse<Venue[]>> =>
+    apiClient.get('/venues/for_business/', { params: { business_id: businessId } }),
+  create: (data: VenueFormData): Promise<AxiosResponse<Venue>> =>
+    apiClient.post('/venues/', data),
+  update: (id: number, data: Partial<VenueFormData>): Promise<AxiosResponse<Venue>> =>
+    apiClient.patch(`/venues/${id}/`, data),
+  delete: (id: number): Promise<AxiosResponse<void>> =>
+    apiClient.delete(`/venues/${id}/`),
+}
+
 export const billingApi = {
   getPlans: (): Promise<AxiosResponse<SubscriptionPlan[]>> =>
     apiClient.get('/billing/plans/'),
@@ -249,6 +266,25 @@ export const analyticsApi = {
   // Get detailed analytics for a specific event
   getEventDetail: (eventId: number, days: number = 30): Promise<AxiosResponse<EventDetailAnalytics>> =>
     apiClient.get(`/analytics/dashboard/event/${eventId}/`, { params: { days } }),
+}
+
+// Notification Preferences API
+export const notificationsApi = {
+  // Get current notification preferences (authenticated users)
+  getPreferences: (): Promise<AxiosResponse<NotificationPreferences>> =>
+    apiClient.get('/notification-preferences/'),
+
+  // Update notification preferences (authenticated users)
+  updatePreferences: (data: Partial<NotificationPreferences>): Promise<AxiosResponse<NotificationPreferences & { message: string }>> =>
+    apiClient.patch('/notification-preferences/', data),
+
+  // Guest unsubscribe via token
+  guestUnsubscribe: (token: string): Promise<AxiosResponse<GuestUnsubscribeResponse>> =>
+    apiClient.get('/unsubscribe/guest/', { params: { token } }),
+
+  // Guest resubscribe via token
+  guestResubscribe: (token: string): Promise<AxiosResponse<GuestUnsubscribeResponse>> =>
+    apiClient.post('/resubscribe/guest/', { token }),
 }
 
 export default apiClient

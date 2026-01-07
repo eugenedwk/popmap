@@ -7,14 +7,15 @@ from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend
 from datetime import timedelta
 
-from .models import Business, Event, Category, EventRSVP
+from .models import Business, Event, Category, EventRSVP, GuestEmailPreference, Venue
 from .serializers import (
     BusinessSerializer,
     EventSerializer,
     EventListSerializer,
     CategorySerializer,
     EventRSVPSerializer,
-    GuestRSVPSerializer
+    GuestRSVPSerializer,
+    VenueSerializer
 )
 from .permissions import (
     IsBusinessOwnerOrReadOnly,
@@ -95,6 +96,57 @@ class BusinessViewSet(viewsets.ModelViewSet):
                 {'error': f'No business found with subdomain: {subdomain}'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class VenueViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for venues.
+    - GET: View venues (filtered by business for owners)
+    - POST: Create a venue for your business
+    - PUT/PATCH: Update your venue
+    - DELETE: Delete your venue
+    """
+    serializer_class = VenueSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'address']
+    ordering_fields = ['name', 'created_at']
+    ordering = ['name']
+
+    def get_queryset(self):
+        """Return venues for businesses owned by the current user"""
+        user = self.request.user
+        if user.is_staff:
+            return Venue.objects.all()
+        return Venue.objects.filter(business__owner=user)
+
+    @action(detail=False, methods=['get'])
+    def for_business(self, request):
+        """Get venues for a specific business"""
+        business_id = request.query_params.get('business_id')
+        if not business_id:
+            return Response(
+                {'error': 'business_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if user has access to this business
+        try:
+            business = Business.objects.get(id=business_id)
+            if not request.user.is_staff and business.owner != request.user:
+                return Response(
+                    {'error': 'You do not have access to this business'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        except Business.DoesNotExist:
+            return Response(
+                {'error': 'Business not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        venues = Venue.objects.filter(business_id=business_id)
+        serializer = self.get_serializer(venues, many=True)
+        return Response(serializer.data)
 
 
 class EventViewSet(viewsets.ModelViewSet):
@@ -525,3 +577,127 @@ class EventViewSet(viewsets.ModelViewSet):
                 'has_rsvp': False,
                 'status': None
             })
+
+
+from rest_framework.views import APIView
+
+
+class GuestUnsubscribeView(APIView):
+    """
+    Handle guest email unsubscribe requests.
+    GET /api/events/unsubscribe/guest/?token=<uuid>
+    POST /api/events/unsubscribe/guest/ with {"token": "<uuid>"}
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """Handle unsubscribe via GET (for email link clicks)"""
+        token = request.query_params.get('token')
+        return self._process_unsubscribe(token)
+
+    def post(self, request):
+        """Handle unsubscribe via POST"""
+        token = request.data.get('token')
+        return self._process_unsubscribe(token)
+
+    def _process_unsubscribe(self, token):
+        if not token:
+            return Response(
+                {'error': 'Unsubscribe token is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            pref = GuestEmailPreference.objects.get(unsubscribe_token=token)
+            pref.event_reminders_enabled = False
+            pref.save()
+
+            return Response({
+                'message': 'You have been unsubscribed from event reminders.',
+                'email': pref.email
+            })
+        except GuestEmailPreference.DoesNotExist:
+            return Response(
+                {'error': 'Invalid unsubscribe token'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class GuestResubscribeView(APIView):
+    """
+    Handle guest email resubscribe requests.
+    POST /api/events/resubscribe/guest/ with {"token": "<uuid>"}
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        """Handle resubscribe via POST"""
+        token = request.data.get('token')
+
+        if not token:
+            return Response(
+                {'error': 'Unsubscribe token is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            pref = GuestEmailPreference.objects.get(unsubscribe_token=token)
+            pref.event_reminders_enabled = True
+            pref.save()
+
+            return Response({
+                'message': 'You have been resubscribed to event reminders.',
+                'email': pref.email
+            })
+        except GuestEmailPreference.DoesNotExist:
+            return Response(
+                {'error': 'Invalid token'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class UserNotificationPreferencesView(APIView):
+    """
+    Get/update notification preferences for authenticated users.
+    GET /api/events/notification-preferences/
+    PATCH /api/events/notification-preferences/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Get current notification preferences"""
+        try:
+            profile = request.user.profile
+            return Response({
+                'email_notifications_enabled': profile.email_notifications_enabled,
+                'event_reminder_enabled': profile.event_reminder_enabled,
+            })
+        except Exception:
+            return Response(
+                {'error': 'User profile not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    def patch(self, request):
+        """Update notification preferences"""
+        try:
+            profile = request.user.profile
+
+            if 'email_notifications_enabled' in request.data:
+                profile.email_notifications_enabled = request.data['email_notifications_enabled']
+
+            if 'event_reminder_enabled' in request.data:
+                profile.event_reminder_enabled = request.data['event_reminder_enabled']
+
+            profile.save()
+
+            return Response({
+                'message': 'Notification preferences updated',
+                'email_notifications_enabled': profile.email_notifications_enabled,
+                'event_reminder_enabled': profile.event_reminder_enabled,
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )

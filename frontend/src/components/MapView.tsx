@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps'
+import { Map, MapMarker, MarkerContent, MapPopup, MapControls } from '@/components/ui/map'
 import { useMapEvents } from '../hooks/useEvents'
 import { useUserGeolocation } from '../hooks/useUserGeolocation'
 import { eventsApi } from '../services/api'
@@ -16,14 +16,13 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Calendar, Clock, MapPin, Loader2, X, ExternalLink } from 'lucide-react'
+import { Calendar, Clock, MapPin, Loader2, ExternalLink } from 'lucide-react'
 import { CustomMapPin } from './CustomMapPin'
 import type { Event } from '../types'
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-
 // Default center (Washington DC) - used as fallback if geolocation fails
-const DEFAULT_CENTER = { lat: 38.9072, lng: -77.0369 }
+// Note: MapLibre uses [longitude, latitude] format
+const DEFAULT_CENTER: [number, number] = [-77.0369, 38.9072]
 
 interface MapViewProps {
   onBusinessClick?: (businessId: number) => void
@@ -32,9 +31,9 @@ interface MapViewProps {
 function MapView({ onBusinessClick }: MapViewProps) {
   const navigate = useNavigate()
   const { data: events, isLoading, error } = useMapEvents()
-  const { coordinates } = useUserGeolocation(DEFAULT_CENTER)
+  const { coordinates } = useUserGeolocation({ lat: DEFAULT_CENTER[1], lng: DEFAULT_CENTER[0] })
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null)
-  const [infoWindowEvent, setInfoWindowEvent] = useState<Event | null>(null)
+  const [popupEvent, setPopupEvent] = useState<Event | null>(null)
 
   // Fetch full event details when an event is selected
   const { data: fullEventDetails, isLoading: isLoadingDetails } = useQuery({
@@ -65,34 +64,23 @@ function MapView({ onBusinessClick }: MapViewProps) {
   }
 
   function handleMarkerClick(event: Event) {
-    setInfoWindowEvent(event)
+    setPopupEvent(event)
     setSelectedEventId(event.id)
   }
 
   function handleCloseModal() {
     setSelectedEventId(null)
-    setInfoWindowEvent(null)
+    setPopupEvent(null)
   }
 
-  if (!GOOGLE_MAPS_API_KEY) {
-    return (
-      <div className="h-full flex items-center justify-center bg-background">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle className="text-destructive">Configuration Required</CardTitle>
-            <CardDescription>
-              Please add your Google Maps API key to the .env file:
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <code className="block p-2 bg-muted text-sm rounded">
-              VITE_GOOGLE_MAPS_API_KEY=your-key-here
-            </code>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  function handleClosePopup() {
+    setPopupEvent(null)
   }
+
+  // Calculate center from coordinates (converting from {lat, lng} to [lng, lat])
+  const mapCenter: [number, number] = coordinates
+    ? [coordinates.lng, coordinates.lat]
+    : DEFAULT_CENTER
 
   if (error) {
     return (
@@ -119,98 +107,103 @@ function MapView({ onBusinessClick }: MapViewProps) {
         </div>
       )}
 
-      <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-        <Map
-          defaultCenter={coordinates || DEFAULT_CENTER}
-          defaultZoom={11}
-          mapId="popmap-events"
-          className="h-full"
-        >
-          {events?.map((event) => (
-            <AdvancedMarker
-              key={event.id}
-              position={{ lat: parseFloat(event.latitude), lng: parseFloat(event.longitude) }}
-              onClick={() => handleMarkerClick(event)}
-            >
-              <CustomMapPin categories={event.categories || []} />
-            </AdvancedMarker>
-          ))}
+      <Map
+        center={mapCenter}
+        zoom={11}
+        className="h-full"
+      >
+        {/* Map Controls */}
+        <MapControls
+          position="bottom-right"
+          showZoom={true}
+          showLocate={true}
+        />
 
-          {/* Minimal InfoWindow for quick preview */}
-          {infoWindowEvent && (
-            <InfoWindow
-              position={{
-                lat: parseFloat(infoWindowEvent.latitude),
-                lng: parseFloat(infoWindowEvent.longitude),
-              }}
-              onCloseClick={() => {
-                setInfoWindowEvent(null)
-                setSelectedEventId(null)
-              }}
-            >
-              <div className="p-2 max-w-xs">
-                {infoWindowEvent.image && (
-                  <div className="relative w-full h-32 overflow-hidden rounded-md mb-2">
-                    <img
-                      src={infoWindowEvent.image}
-                      alt={infoWindowEvent.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                <h3 className="font-bold text-lg mb-1">{infoWindowEvent.title}</h3>
-                <p className="text-sm text-gray-600 mb-2">
-                  {infoWindowEvent.businesses && infoWindowEvent.businesses.length > 0 ? (
-                    <span>
-                      {infoWindowEvent.businesses.map((business, index) => (
-                        <span key={business.id}>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onBusinessClick?.(business.id)
-                            }}
-                            className="hover:underline hover:text-blue-800 transition-colors"
-                          >
-                            {business.name}
-                          </button>
-                          {index < infoWindowEvent.businesses.length - 1 && ', '}
-                        </span>
-                      ))}
-                    </span>
-                  ) : (
-                    infoWindowEvent.business_names
-                  )}
-                </p>
-                {infoWindowEvent.categories && infoWindowEvent.categories.length > 0 && (
-                  <div className="flex gap-1 flex-wrap mb-2">
-                    {infoWindowEvent.categories.map((category) => (
-                      <Badge key={category} variant="secondary" className="text-xs">
-                        {category}
-                      </Badge>
+        {/* Event Markers */}
+        {events?.map((event) => (
+          <MapMarker
+            key={event.id}
+            longitude={parseFloat(event.longitude)}
+            latitude={parseFloat(event.latitude)}
+            onClick={() => handleMarkerClick(event)}
+          >
+            <MarkerContent>
+              <CustomMapPin categories={event.categories || []} />
+            </MarkerContent>
+          </MapMarker>
+        ))}
+
+        {/* Popup for selected event */}
+        {popupEvent && (
+          <MapPopup
+            longitude={parseFloat(popupEvent.longitude)}
+            latitude={parseFloat(popupEvent.latitude)}
+            onClose={handleClosePopup}
+            closeButton
+            className="max-w-xs p-0"
+          >
+            <div className="p-2">
+              {popupEvent.image && (
+                <div className="relative w-full h-32 overflow-hidden rounded-md mb-2">
+                  <img
+                    src={popupEvent.image}
+                    alt={popupEvent.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <h3 className="font-bold text-lg mb-1">{popupEvent.title}</h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                {popupEvent.businesses && popupEvent.businesses.length > 0 ? (
+                  <span>
+                    {popupEvent.businesses.map((business, index) => (
+                      <span key={business.id}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onBusinessClick?.(business.id)
+                          }}
+                          className="hover:underline hover:text-primary transition-colors"
+                        >
+                          {business.name}
+                        </button>
+                        {index < popupEvent.businesses.length - 1 && ', '}
+                      </span>
                     ))}
-                  </div>
+                  </span>
+                ) : (
+                  popupEvent.business_names
                 )}
-                <p className="text-sm">
-                  {formatDate(infoWindowEvent.start_datetime)} - {formatDate(infoWindowEvent.end_datetime)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {formatTime(infoWindowEvent.start_datetime)}
-                </p>
-                <Button
-                  size="sm"
-                  className="mt-2 w-full"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    navigate(`/e/${infoWindowEvent.id}`)
-                  }}
-                >
-                  View Details
-                </Button>
-              </div>
-            </InfoWindow>
-          )}
-        </Map>
-      </APIProvider>
+              </p>
+              {popupEvent.categories && popupEvent.categories.length > 0 && (
+                <div className="flex gap-1 flex-wrap mb-2">
+                  {popupEvent.categories.map((category) => (
+                    <Badge key={category} variant="secondary" className="text-xs">
+                      {category}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <p className="text-sm">
+                {formatDate(popupEvent.start_datetime)} - {formatDate(popupEvent.end_datetime)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {formatTime(popupEvent.start_datetime)}
+              </p>
+              <Button
+                size="sm"
+                className="mt-2 w-full"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigate(`/e/${popupEvent.id}`)
+                }}
+              >
+                View Details
+              </Button>
+            </div>
+          </MapPopup>
+        )}
+      </Map>
 
       {/* Event Details Modal */}
       <Dialog open={!!selectedEventId} onOpenChange={(open) => !open && handleCloseModal()}>

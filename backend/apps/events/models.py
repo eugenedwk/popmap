@@ -226,6 +226,34 @@ class Business(models.Model):
         return self.can_use_premium_customization()
 
 
+class Venue(models.Model):
+    """
+    Represents a saved venue/location that can be reused across events.
+    Linked to a business so each business can save their common venues.
+    """
+    business = models.ForeignKey(
+        Business,
+        on_delete=models.CASCADE,
+        related_name='venues',
+        help_text="The business that owns this venue"
+    )
+    name = models.CharField(max_length=255, help_text="Name of the venue (e.g., 'Central Park', 'The Coffee Shop')")
+    address = models.CharField(max_length=500, help_text="Full address of the venue")
+    latitude = models.DecimalField(max_digits=20, decimal_places=16)
+    longitude = models.DecimalField(max_digits=20, decimal_places=16)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['business', 'name']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.business.name})"
+
+
 class Event(models.Model):
     """
     Represents a popup event that will be displayed on the map.
@@ -260,6 +288,14 @@ class Event(models.Model):
     description = models.TextField(blank=True)
 
     # Location
+    venue = models.ForeignKey(
+        Venue,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='events',
+        help_text="Select a saved venue to auto-populate location fields"
+    )
     location_name = models.CharField(max_length=255, blank=True, help_text="Name of the venue/location (optional)")
     address = models.CharField(max_length=500)
     latitude = models.DecimalField(max_digits=20, decimal_places=16)

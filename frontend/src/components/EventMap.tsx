@@ -1,34 +1,24 @@
 import { useState } from 'react'
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps'
+import { Map, MapMarker, MarkerContent, MapPopup, MapControls } from '@/components/ui/map'
 import { useMapEvents } from '../hooks/useEvents'
 import { useUserGeolocation } from '../hooks/useUserGeolocation'
+import { Card, CardContent } from '@/components/ui/card'
 import EventCard from './EventCard'
-
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+import type { Event } from '../types'
 
 // Default center (San Francisco) - used as fallback if geolocation fails
-const DEFAULT_CENTER = { lat: 37.7749, lng: -122.4194 }
+// Note: MapLibre uses [longitude, latitude] format
+const DEFAULT_CENTER: [number, number] = [-122.4194, 37.7749]
 
 function EventMap() {
   const { data: events, isLoading, error } = useMapEvents()
-  const { coordinates } = useUserGeolocation(DEFAULT_CENTER)
-  const [selectedEvent, setSelectedEvent] = useState(null)
+  const { coordinates } = useUserGeolocation({ lat: DEFAULT_CENTER[1], lng: DEFAULT_CENTER[0] })
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
 
-  if (!GOOGLE_MAPS_API_KEY) {
-    return (
-      <div className="h-full flex items-center justify-center bg-gray-100">
-        <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md">
-          <h2 className="text-xl font-bold text-red-600 mb-2">Configuration Required</h2>
-          <p className="text-gray-600">
-            Please add your Google Maps API key to the .env file:
-          </p>
-          <code className="block mt-2 p-2 bg-gray-100 text-sm">
-            VITE_GOOGLE_MAPS_API_KEY=your-key-here
-          </code>
-        </div>
-      </div>
-    )
-  }
+  // Calculate center from coordinates (converting from {lat, lng} to [lng, lat])
+  const mapCenter: [number, number] = coordinates
+    ? [coordinates.lng, coordinates.lat]
+    : DEFAULT_CENTER
 
   if (error) {
     return (
@@ -49,41 +39,45 @@ function EventMap() {
         </div>
       )}
 
-      <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-        <Map
-          defaultCenter={coordinates || DEFAULT_CENTER}
-          defaultZoom={12}
-          mapId="popmap-events"
-          className="h-full"
-        >
-          {events?.map((event) => (
-            <AdvancedMarker
-              key={event.id}
-              position={{ lat: parseFloat(event.latitude), lng: parseFloat(event.longitude) }}
-              onClick={() => setSelectedEvent(event)}
-            />
-          ))}
+      <Map
+        center={mapCenter}
+        zoom={12}
+        className="h-full"
+      >
+        <MapControls position="bottom-right" showZoom={true} showLocate={true} />
 
-          {selectedEvent && (
-            <InfoWindow
-              position={{
-                lat: parseFloat(selectedEvent.latitude),
-                lng: parseFloat(selectedEvent.longitude),
-              }}
-              onCloseClick={() => setSelectedEvent(null)}
-            >
-              <div className="p-2 max-w-xs">
-                <h3 className="font-bold text-lg">{selectedEvent.title}</h3>
-                <p className="text-sm text-gray-600 mb-1">{selectedEvent.business_name}</p>
-                <p className="text-sm">
-                  {new Date(selectedEvent.start_datetime).toLocaleDateString()} -{' '}
-                  {new Date(selectedEvent.end_datetime).toLocaleDateString()}
-                </p>
-              </div>
-            </InfoWindow>
-          )}
-        </Map>
-      </APIProvider>
+        {events?.map((event) => (
+          <MapMarker
+            key={event.id}
+            longitude={parseFloat(event.longitude)}
+            latitude={parseFloat(event.latitude)}
+            onClick={() => setSelectedEvent(event)}
+          >
+            <MarkerContent>
+              <div className="h-3 w-3 rounded-full bg-primary border-2 border-white shadow-lg" />
+            </MarkerContent>
+          </MapMarker>
+        ))}
+
+        {selectedEvent && (
+          <MapPopup
+            longitude={parseFloat(selectedEvent.longitude)}
+            latitude={parseFloat(selectedEvent.latitude)}
+            onClose={() => setSelectedEvent(null)}
+            closeButton
+            className="max-w-xs p-0"
+          >
+            <div className="p-2">
+              <h3 className="font-bold text-lg">{selectedEvent.title}</h3>
+              <p className="text-sm text-gray-600 mb-1">{selectedEvent.business_names}</p>
+              <p className="text-sm">
+                {new Date(selectedEvent.start_datetime).toLocaleDateString()} -{' '}
+                {new Date(selectedEvent.end_datetime).toLocaleDateString()}
+              </p>
+            </div>
+          </MapPopup>
+        )}
+      </Map>
 
       {/* Event List Sidebar */}
       <div className="absolute top-0 right-0 h-full w-80 bg-white shadow-lg overflow-y-auto">
