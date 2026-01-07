@@ -5,7 +5,7 @@ from django.urls import path, reverse
 from django.http import HttpResponseRedirect
 from django.utils import timezone
 from datetime import datetime, timedelta
-from .models import Business, Event, Category, EventRSVP, GuestEmailPreference, EventReminderLog
+from .models import Business, Event, Category, EventRSVP, GuestEmailPreference, EventReminderLog, Venue
 
 
 @admin.register(Category)
@@ -14,6 +14,29 @@ class CategoryAdmin(admin.ModelAdmin):
     search_fields = ['name', 'slug']
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ['created_at']
+
+
+@admin.register(Venue)
+class VenueAdmin(admin.ModelAdmin):
+    list_display = ['name', 'business', 'address', 'created_at']
+    list_filter = ['business', 'created_at']
+    search_fields = ['name', 'address', 'business__name']
+    readonly_fields = ['created_at', 'updated_at']
+    raw_id_fields = ['business']
+
+    fieldsets = (
+        ('Venue Information', {
+            'fields': ('business', 'name', 'address')
+        }),
+        ('Coordinates', {
+            'fields': ('latitude', 'longitude'),
+            'description': 'GPS coordinates for the venue location'
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(Business)
@@ -92,8 +115,8 @@ class EventAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Location', {
-            'fields': ('location_name', 'address', 'latitude', 'longitude'),
-            'description': 'Enter the address and click "Geocode Address" button below to auto-fill coordinates'
+            'fields': ('venue', 'location_name', 'address', 'latitude', 'longitude'),
+            'description': 'Select a saved venue to auto-populate location, or enter address and click "Geocode Address" button to auto-fill coordinates'
         }),
         ('Schedule', {
             'fields': ('start_datetime', 'end_datetime')
@@ -257,6 +280,7 @@ class EventAdmin(admin.ModelAdmin):
                     host_business=event.host_business,
                     title=f"{event.title}{title_suffix}",
                     description=event.description,
+                    venue=event.venue,
                     location_name=event.location_name,
                     address=event.address,
                     latitude=event.latitude,

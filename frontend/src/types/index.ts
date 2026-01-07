@@ -56,11 +56,34 @@ export interface BusinessMinimal {
   categories: Category[]
 }
 
+// Venue types
+export interface Venue {
+  id: number
+  business: number
+  business_name: string
+  name: string
+  address: string
+  latitude: string
+  longitude: string
+  created_at: string
+  updated_at: string
+}
+
+// Venue for dropdowns (minimal)
+export interface VenueMinimal {
+  id: number
+  name: string
+  address: string
+  latitude: string
+  longitude: string
+}
+
 // Event types
 export interface Event {
   id: number
   title: string
   description: string
+  venue?: VenueMinimal | null
   address: string
   latitude: string
   longitude: string
@@ -133,6 +156,7 @@ export interface EventFormData {
   cta_button_text?: string
   cta_button_url?: string
   require_login_for_rsvp?: boolean
+  venue_id?: number | null
   address: string
   latitude: string
   longitude: string
@@ -140,6 +164,14 @@ export interface EventFormData {
   end_datetime: string
   business_ids: number[]
   image?: File
+}
+
+export interface VenueFormData {
+  business: number
+  name: string
+  address: string
+  latitude: string
+  longitude: string
 }
 
 // API Response types

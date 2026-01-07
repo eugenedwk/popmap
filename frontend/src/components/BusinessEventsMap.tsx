@@ -1,13 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps'
+import { Map, MapMarker, MarkerContent, MapPopup, MapControls } from '@/components/ui/map'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar, Clock, MapPin } from 'lucide-react'
 import type { Event } from '../types'
-
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
 interface BusinessEventsMapProps {
   events: Event[]
@@ -19,17 +17,18 @@ export function BusinessEventsMap({ events, businessName }: BusinessEventsMapPro
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
 
   // Calculate center of map based on events
-  const mapCenter = useMemo(() => {
+  // Note: MapLibre uses [longitude, latitude] format
+  const mapCenter = useMemo((): [number, number] => {
     if (events.length === 0) {
       // Default to San Francisco if no events
-      return { lat: 37.7749, lng: -122.4194 }
+      return [-122.4194, 37.7749]
     }
 
     // Calculate average position of all events
     const avgLat = events.reduce((sum, event) => sum + parseFloat(event.latitude), 0) / events.length
     const avgLng = events.reduce((sum, event) => sum + parseFloat(event.longitude), 0) / events.length
 
-    return { lat: avgLat, lng: avgLng }
+    return [avgLng, avgLat]
   }, [events])
 
   // Calculate appropriate zoom level based on event spread
@@ -68,19 +67,6 @@ export function BusinessEventsMap({ events, businessName }: BusinessEventsMapPro
     })
   }
 
-  if (!GOOGLE_MAPS_API_KEY) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Event Locations</CardTitle>
-          <CardDescription>
-            Google Maps API key is not configured
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    )
-  }
-
   if (events.length === 0) {
     return (
       <Card>
@@ -109,68 +95,67 @@ export function BusinessEventsMap({ events, businessName }: BusinessEventsMapPro
       </CardHeader>
       <CardContent>
         <div className="h-[400px] rounded-lg overflow-hidden border">
-          <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-            <Map
-              defaultCenter={mapCenter}
-              defaultZoom={mapZoom}
-              mapId="business-events-map"
-              className="h-full w-full"
-              disableDefaultUI={false}
-              gestureHandling="greedy"
-            >
-              {events.map((event) => (
-                <AdvancedMarker
-                  key={event.id}
-                  position={{
-                    lat: parseFloat(event.latitude),
-                    lng: parseFloat(event.longitude)
-                  }}
-                  onClick={() => setSelectedEvent(event)}
-                />
-              ))}
+          <Map
+            center={mapCenter}
+            zoom={mapZoom}
+            className="h-full w-full"
+          >
+            <MapControls position="bottom-right" showZoom={true} />
 
-              {selectedEvent && (
-                <InfoWindow
-                  position={{
-                    lat: parseFloat(selectedEvent.latitude),
-                    lng: parseFloat(selectedEvent.longitude),
-                  }}
-                  onCloseClick={() => setSelectedEvent(null)}
-                >
-                  <div className="p-2 max-w-sm">
-                    <h3 className="font-bold text-base mb-2 line-clamp-2">
-                      {selectedEvent.title}
-                    </h3>
+            {events.map((event) => (
+              <MapMarker
+                key={event.id}
+                longitude={parseFloat(event.longitude)}
+                latitude={parseFloat(event.latitude)}
+                onClick={() => setSelectedEvent(event)}
+              >
+                <MarkerContent>
+                  <div className="h-3 w-3 rounded-full bg-primary border-2 border-white shadow-lg" />
+                </MarkerContent>
+              </MapMarker>
+            ))}
 
-                    <div className="space-y-1.5 text-sm mb-3">
-                      <div className="flex items-start gap-2 text-muted-foreground">
-                        <Calendar className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                        <span>{formatDate(selectedEvent.start_datetime)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Clock className="h-4 w-4 flex-shrink-0" />
-                        <span>
-                          {formatTime(selectedEvent.start_datetime)} - {formatTime(selectedEvent.end_datetime)}
-                        </span>
-                      </div>
-                      <div className="flex items-start gap-2 text-muted-foreground">
-                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                        <span className="line-clamp-2">{selectedEvent.address}</span>
-                      </div>
+            {selectedEvent && (
+              <MapPopup
+                longitude={parseFloat(selectedEvent.longitude)}
+                latitude={parseFloat(selectedEvent.latitude)}
+                onClose={() => setSelectedEvent(null)}
+                closeButton
+                className="max-w-sm p-0"
+              >
+                <div className="p-2">
+                  <h3 className="font-bold text-base mb-2 line-clamp-2">
+                    {selectedEvent.title}
+                  </h3>
+
+                  <div className="space-y-1.5 text-sm mb-3">
+                    <div className="flex items-start gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>{formatDate(selectedEvent.start_datetime)}</span>
                     </div>
-
-                    <Button
-                      size="sm"
-                      className="w-full"
-                      onClick={() => navigate(`/e/${selectedEvent.id}`)}
-                    >
-                      View Event Details
-                    </Button>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-4 w-4 flex-shrink-0" />
+                      <span>
+                        {formatTime(selectedEvent.start_datetime)} - {formatTime(selectedEvent.end_datetime)}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span className="line-clamp-2">{selectedEvent.address}</span>
+                    </div>
                   </div>
-                </InfoWindow>
-              )}
-            </Map>
-          </APIProvider>
+
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => navigate(`/e/${selectedEvent.id}`)}
+                  >
+                    View Event Details
+                  </Button>
+                </div>
+              </MapPopup>
+            )}
+          </Map>
         </div>
       </CardContent>
     </Card>

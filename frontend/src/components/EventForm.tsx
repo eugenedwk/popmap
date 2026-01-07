@@ -4,9 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
-import { APIProvider } from '@vis.gl/react-google-maps'
-import { eventsApi, businessesApi, formsApi } from '../services/api'
-import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete'
+import { eventsApi, businessesApi, formsApi, venuesApi } from '../services/api'
+import type { VenueMinimal, PlaceResult } from '../types'
+import { AddressAutocomplete } from './AddressAutocomplete'
 import { analytics } from '../lib/analytics'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,8 +18,6 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, CheckCircle2, XCircle, MapPin, Search, X } from 'lucide-react'
-
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
 const eventSchema = z.object({
   title: z.string().min(1, 'Event title is required').max(255),
@@ -92,6 +90,7 @@ function EventFormContent({ eventId }: EventFormContentProps) {
   const [selectedPlace, setSelectedPlace] = useState<{ address: string; latitude: number; longitude: number } | null>(null)
   const [businessSearch, setBusinessSearch] = useState('')
   const [isFormReady, setIsFormReady] = useState(!isEditMode) // Ready immediately for create, wait for data in edit
+  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null)
 
   // Fetch existing event data when in edit mode
   const { data: existingEvent, isLoading: eventLoading } = useQuery({
@@ -123,6 +122,16 @@ function EventFormContent({ eventId }: EventFormContentProps) {
     enabled: selectedBusinesses.length > 0
   })
 
+  // Fetch venues for the first selected business
+  const { data: venues } = useQuery({
+    queryKey: ['venues', selectedBusinesses[0]],
+    queryFn: async () => {
+      const response = await venuesApi.getForBusiness(selectedBusinesses[0])
+      return response.data
+    },
+    enabled: selectedBusinesses.length > 0
+  })
+
   const mutation = useMutation({
     mutationFn: (data: any) => isEditMode ? eventsApi.update(eventId!, data) : eventsApi.create(data),
     onSuccess: () => {
@@ -141,6 +150,7 @@ function EventFormContent({ eventId }: EventFormContentProps) {
         setSelectedBusinesses([])
         setSelectedPlace(null)
         setBusinessSearch('')
+        setSelectedVenueId(null)
       }
     },
     onError: () => {
@@ -215,9 +225,14 @@ function EventFormContent({ eventId }: EventFormContentProps) {
       if (existingEvent.address && existingEvent.latitude && existingEvent.longitude) {
         setSelectedPlace({
           address: existingEvent.address,
-          latitude: existingEvent.latitude,
-          longitude: existingEvent.longitude,
+          latitude: parseFloat(existingEvent.latitude),
+          longitude: parseFloat(existingEvent.longitude),
         })
+      }
+
+      // Set selected venue if event has one
+      if (existingEvent.venue?.id) {
+        setSelectedVenueId(existingEvent.venue.id.toString())
       }
 
       setIsFormReady(true)
@@ -234,11 +249,35 @@ function EventFormContent({ eventId }: EventFormContentProps) {
     form.setValue('address', place.address)
     form.setValue('latitude', place.latitude.toString())
     form.setValue('longitude', place.longitude.toString())
+    // Clear venue selection when manually selecting a place
+    setSelectedVenueId(null)
     // Trigger validation
     form.trigger(['address', 'latitude', 'longitude'])
   }, [form])
 
-  const inputRef = usePlacesAutocomplete(handlePlaceSelect)
+  // Handle venue selection - auto-populate location fields
+  const handleVenueSelect = useCallback((venueId: string) => {
+    if (venueId === 'none') {
+      setSelectedVenueId(null)
+      // Don't clear the address fields - let user keep current selection
+      return
+    }
+
+    setSelectedVenueId(venueId)
+    const venue = venues?.find((v: VenueMinimal) => v.id.toString() === venueId)
+    if (venue) {
+      const place = {
+        address: venue.address,
+        latitude: parseFloat(venue.latitude),
+        longitude: parseFloat(venue.longitude)
+      }
+      setSelectedPlace(place)
+      form.setValue('address', venue.address)
+      form.setValue('latitude', venue.latitude)
+      form.setValue('longitude', venue.longitude)
+      form.trigger(['address', 'latitude', 'longitude'])
+    }
+  }, [venues, form])
 
   const onSubmit = (data) => {
     setSubmitStatus(null)
@@ -255,6 +294,7 @@ function EventFormContent({ eventId }: EventFormContentProps) {
       cta_button_text: data.cta_button_text,
       cta_button_url: data.cta_button_url,
       require_login_for_rsvp: data.require_login_for_rsvp,
+      venue_id: selectedVenueId ? parseInt(selectedVenueId) : null,
       address: data.address,
       image: data.image?.[0], // Get first file if exists
       latitude: parseFloat(data.latitude),
@@ -503,6 +543,32 @@ function EventFormContent({ eventId }: EventFormContentProps) {
                 )}
               />
 
+              {/* Venue Selector - only show if venues are available */}
+              {venues && venues.length > 0 && (
+                <div className="space-y-2">
+                  <FormLabel>Select a Saved Venue</FormLabel>
+                  <Select
+                    value={selectedVenueId || undefined}
+                    onValueChange={handleVenueSelect}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a saved venue (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Enter address manually</SelectItem>
+                      {venues.map((venue: VenueMinimal) => (
+                        <SelectItem key={venue.id} value={venue.id.toString()}>
+                          {venue.name} - {venue.address}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Select a previously saved venue to auto-fill the location, or enter a new address below.
+                  </FormDescription>
+                </div>
+              )}
+
               {/* Address Autocomplete */}
               <FormField
                 control={form.control}
@@ -511,24 +577,24 @@ function EventFormContent({ eventId }: EventFormContentProps) {
                   <FormItem>
                     <FormLabel>Event Location *</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          ref={inputRef}
-                          placeholder="Search for an address..."
-                          className="pl-9"
-                          onChange={(e) => {
-                            field.onChange(e)
-                            // Clear coordinates when user manually types
-                            if (!e.target.value) {
-                              setSelectedPlace(null)
-                              form.setValue('latitude', '')
-                              form.setValue('longitude', '')
-                            }
-                          }}
-                          value={field.value}
-                        />
-                      </div>
+                      <AddressAutocomplete
+                        value={field.value}
+                        onChange={(value) => {
+                          field.onChange(value)
+                          // Clear coordinates and venue selection when user clears the field
+                          if (!value) {
+                            setSelectedPlace(null)
+                            setSelectedVenueId(null)
+                            form.setValue('latitude', '')
+                            form.setValue('longitude', '')
+                          }
+                        }}
+                        onPlaceSelect={(place) => {
+                          handlePlaceSelect(place)
+                          setSelectedVenueId(null) // Clear venue selection when using autocomplete
+                        }}
+                        placeholder="Search for an address..."
+                      />
                     </FormControl>
                     <FormDescription>
                       Start typing to search for an address. The location will be automatically geocoded.
@@ -793,36 +859,12 @@ function EventFormContent({ eventId }: EventFormContentProps) {
   )
 }
 
-// Wrapper component that provides Google Maps API
+// Main EventForm component
 function EventForm() {
   const { eventId: eventIdParam } = useParams<{ eventId: string }>()
   const eventId = eventIdParam ? parseInt(eventIdParam, 10) : undefined
 
-  if (!GOOGLE_MAPS_API_KEY) {
-    return (
-      <div className="max-w-3xl mx-auto p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-destructive">Configuration Required</CardTitle>
-            <CardDescription>
-              Please add your Google Maps API key to the .env file:
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <code className="block p-2 bg-muted text-sm rounded">
-              VITE_GOOGLE_MAPS_API_KEY=your-key-here
-            </code>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  return (
-    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-      <EventFormContent eventId={eventId} />
-    </APIProvider>
-  )
+  return <EventFormContent eventId={eventId} />
 }
 
 export default EventForm

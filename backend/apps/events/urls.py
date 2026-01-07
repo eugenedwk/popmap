@@ -4,6 +4,7 @@ from .views import (
     BusinessViewSet,
     EventViewSet,
     CategoryViewSet,
+    VenueViewSet,
     GuestUnsubscribeView,
     GuestResubscribeView,
     UserNotificationPreferencesView,
@@ -12,6 +13,7 @@ from .views import (
 router = DefaultRouter()
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'businesses', BusinessViewSet, basename='business')
+router.register(r'venues', VenueViewSet, basename='venue')
 router.register(r'events', EventViewSet, basename='event')
 
 urlpatterns = [

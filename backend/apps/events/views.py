@@ -7,14 +7,15 @@ from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend
 from datetime import timedelta
 
-from .models import Business, Event, Category, EventRSVP, GuestEmailPreference
+from .models import Business, Event, Category, EventRSVP, GuestEmailPreference, Venue
 from .serializers import (
     BusinessSerializer,
     EventSerializer,
     EventListSerializer,
     CategorySerializer,
     EventRSVPSerializer,
-    GuestRSVPSerializer
+    GuestRSVPSerializer,
+    VenueSerializer
 )
 from .permissions import (
     IsBusinessOwnerOrReadOnly,
@@ -95,6 +96,57 @@ class BusinessViewSet(viewsets.ModelViewSet):
                 {'error': f'No business found with subdomain: {subdomain}'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class VenueViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for venues.
+    - GET: View venues (filtered by business for owners)
+    - POST: Create a venue for your business
+    - PUT/PATCH: Update your venue
+    - DELETE: Delete your venue
+    """
+    serializer_class = VenueSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'address']
+    ordering_fields = ['name', 'created_at']
+    ordering = ['name']
+
+    def get_queryset(self):
+        """Return venues for businesses owned by the current user"""
+        user = self.request.user
+        if user.is_staff:
+            return Venue.objects.all()
+        return Venue.objects.filter(business__owner=user)
+
+    @action(detail=False, methods=['get'])
+    def for_business(self, request):
+        """Get venues for a specific business"""
+        business_id = request.query_params.get('business_id')
+        if not business_id:
+            return Response(
+                {'error': 'business_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if user has access to this business
+        try:
+            business = Business.objects.get(id=business_id)
+            if not request.user.is_staff and business.owner != request.user:
+                return Response(
+                    {'error': 'You do not have access to this business'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        except Business.DoesNotExist:
+            return Response(
+                {'error': 'Business not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        venues = Venue.objects.filter(business_id=business_id)
+        serializer = self.get_serializer(venues, many=True)
+        return Response(serializer.data)
 
 
 class EventViewSet(viewsets.ModelViewSet):

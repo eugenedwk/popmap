@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Business, Event, Category, EventRSVP
+from .models import Business, Event, Category, EventRSVP, Venue
 from .geocoding import get_geocoding_service
 import logging
 
@@ -10,6 +10,40 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'name', 'slug']
+
+
+class VenueSerializer(serializers.ModelSerializer):
+    """Serializer for Venue model - saved locations that can be reused across events"""
+    business_name = serializers.CharField(source='business.name', read_only=True)
+
+    class Meta:
+        model = Venue
+        fields = [
+            'id', 'business', 'business_name', 'name', 'address',
+            'latitude', 'longitude', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate(self, data):
+        """Ensure the business belongs to the current user"""
+        request = self.context.get('request')
+        business = data.get('business')
+
+        if request and business:
+            # Check if user owns this business
+            if not request.user.is_staff and business.owner != request.user:
+                raise serializers.ValidationError({
+                    'business': 'You can only create venues for businesses you own.'
+                })
+        return data
+
+
+class VenueMinimalSerializer(serializers.ModelSerializer):
+    """Minimal venue info for dropdowns and event forms"""
+
+    class Meta:
+        model = Venue
+        fields = ['id', 'name', 'address', 'latitude', 'longitude']
 
 
 class ActiveFormTemplateField(serializers.PrimaryKeyRelatedField):
@@ -197,6 +231,14 @@ class EventSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    venue = VenueMinimalSerializer(read_only=True)
+    venue_id = serializers.PrimaryKeyRelatedField(
+        queryset=Venue.objects.all(),
+        source='venue',
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
     user_rsvp_status = serializers.SerializerMethodField()
     rsvp_counts = serializers.SerializerMethodField()
     # Recurring event fields (write-only, handled in view)
@@ -207,6 +249,7 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         fields = [
             'id', 'businesses', 'business_ids',
+            'venue', 'venue_id',
             'title', 'description', 'address',
             'latitude', 'longitude',
             'start_datetime', 'end_datetime',
