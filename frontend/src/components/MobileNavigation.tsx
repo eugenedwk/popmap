@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { isOnSubdomain, getMainSiteLink } from '@/lib/subdomain'
 
 const views = [
-  { id: 'map', label: 'Map', icon: Map, path: '/' },
+  { id: 'map', label: 'Map', icon: Map, path: '/map' },
   { id: 'list', label: 'List', icon: Calendar, path: '/list' },
   { id: 'cards', label: 'Cards', icon: Grid3x3, path: '/cards' },
   { id: 'brands', label: 'Brands', icon: Building2, path: '/brands' },
