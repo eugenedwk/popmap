@@ -98,7 +98,9 @@ function AppContent() {
     const path = location.pathname;
     trackPageView(path);
 
-    if (path === '/list' || path.startsWith('/list')) {
+    if (path === '/map' || path.startsWith('/map')) {
+      setCurrentView('map');
+    } else if (path === '/list' || path.startsWith('/list')) {
       setCurrentView('list');
     } else if (path === '/cards' || path.startsWith('/cards')) {
       setCurrentView('cards');
@@ -110,15 +112,16 @@ function AppContent() {
     } else if (path === '/submit-event') {
       setCurrentView('submit-event');
       analytics.trackFormView('event');
-    } else if (!path.startsWith('/p/') && !path.startsWith('/e/')) {
-      setCurrentView('map');
     }
+    // Default view (home page) is handled by renderView's default case
   }, [location.pathname]);
 
   const handleViewChange = (view: ViewType) => {
     analytics.trackViewChange(view);
     setCurrentView(view);
-    if (view === 'list') {
+    if (view === 'map') {
+      navigate('/map');
+    } else if (view === 'list') {
       navigate('/list');
     } else if (view === 'cards') {
       navigate('/cards');
@@ -135,19 +138,12 @@ function AppContent() {
 
   const renderView = () => {
     switch (currentView) {
+      case 'map':
+        return <MapView onBusinessClick={handleBusinessClick} />;
       case 'list':
         return <ListView onBusinessClick={handleBusinessClick} />;
       case 'cards':
         return <CardView onBusinessClick={handleBusinessClick} />;
-      case 'map':
-        return (
-          <div className="flex flex-col">
-            <div className="h-[calc(100vh-80px)] md:h-[calc(100vh-80px)] min-h-[400px]">
-              <MapView onBusinessClick={handleBusinessClick} />
-            </div>
-            <LandingPage />
-          </div>
-        );
       case 'brands':
         return <BrandsView onBusinessClick={handleBusinessClick} />;
       case 'submit-business':
@@ -155,14 +151,7 @@ function AppContent() {
       case 'submit-event':
         return <EventForm />;
       default:
-        return (
-          <div className="flex flex-col">
-            <div className="h-[calc(100vh-80px)] md:h-[calc(100vh-80px)] min-h-[400px]">
-              <MapView onBusinessClick={handleBusinessClick} />
-            </div>
-            <LandingPage />
-          </div>
-        );
+        return <LandingPage />;
     }
   };
 

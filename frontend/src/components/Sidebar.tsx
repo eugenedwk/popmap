@@ -54,7 +54,7 @@ const submitOptions = [
 
 // Map view IDs to URL paths
 const viewPaths: Record<string, string> = {
-  'map': '/',
+  'map': '/map',
   'list': '/list',
   'cards': '/cards',
   'brands': '/brands',
