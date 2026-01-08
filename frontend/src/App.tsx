@@ -75,6 +75,7 @@ function FormTemplateEditWrapper() {
 }
 
 type ViewType =
+  | 'landing'
   | 'list'
   | 'cards'
   | 'map'
@@ -83,7 +84,7 @@ type ViewType =
   | 'submit-event';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState<ViewType>('map');
+  const [currentView, setCurrentView] = useState<ViewType>('landing');
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, signOut } = useAuth();
