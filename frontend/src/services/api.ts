@@ -25,7 +25,9 @@ import type {
   NotificationPreferences,
   GuestUnsubscribeResponse,
   Venue,
-  VenueFormData
+  VenueFormData,
+  InstagramImportResult,
+  InstagramImportHistory
 } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -285,6 +287,19 @@ export const notificationsApi = {
   // Guest resubscribe via token
   guestResubscribe: (token: string): Promise<AxiosResponse<GuestUnsubscribeResponse>> =>
     apiClient.post('/resubscribe/guest/', { token }),
+}
+
+// Instagram API
+export const instagramApi = {
+  import: async (): Promise<InstagramImportResult> => {
+    const response = await apiClient.post<InstagramImportResult>('/instagram/import/')
+    return response.data
+  },
+
+  getImportHistory: async (): Promise<InstagramImportHistory[]> => {
+    const response = await apiClient.get<InstagramImportHistory[]>('/instagram/import/history/')
+    return response.data
+  },
 }
 
 export default apiClient

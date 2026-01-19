@@ -15,6 +15,7 @@ export interface Business {
   website?: string
   instagram_url?: string
   tiktok_url?: string
+  instagram_handle?: string | null
   available_for_hire: boolean
   logo?: string
   categories: Category[]
@@ -418,4 +419,22 @@ export interface NotificationPreferences {
 export interface GuestUnsubscribeResponse {
   message: string
   email: string
+}
+
+// Instagram Import types
+export interface InstagramImportResult {
+  imported: number
+  skipped_duplicate: number
+  skipped_not_event: number
+  skipped_error: number
+  draft_ids: number[]
+  error?: string
+}
+
+export interface InstagramImportHistory {
+  instagram_post_id: string
+  event_id: number | null
+  event_title: string | null
+  original_permalink: string
+  imported_at: string
 }
