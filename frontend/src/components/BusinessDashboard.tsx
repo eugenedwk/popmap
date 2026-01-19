@@ -14,6 +14,8 @@ import { FormTemplateBuilder } from './FormTemplateBuilder'
 import { BusinessPageSettings } from './BusinessPageSettings'
 import { FormBuilderPaywall } from './FormBuilderPaywall'
 import { AnalyticsDashboard } from './AnalyticsDashboard'
+import { InstagramSettings } from './InstagramSettings'
+import { InstagramImportButton } from './InstagramImportButton'
 import { format } from 'date-fns'
 
 /**
@@ -368,6 +370,26 @@ export function BusinessDashboard() {
 
             {/* Custom Subdomain Settings */}
             <BusinessSubdomainSettings business={business} />
+
+            {/* Instagram Integration */}
+            <InstagramSettings
+              business={business}
+              onUpdate={async (handle) => {
+                await businessesApi.update(business.id, { instagram_handle: handle })
+                // Refetch business to update state
+                window.location.reload()
+              }}
+              isPremium={business.can_use_premium_customization}
+            />
+
+            <InstagramImportButton
+              hasHandle={!!business.instagram_handle}
+              isPremium={business.can_use_premium_customization}
+              onImportComplete={(result) => {
+                // Could optionally refetch events list here
+                console.log('Import complete:', result)
+              }}
+            />
           </TabsContent>
         </Tabs>
       </div>
