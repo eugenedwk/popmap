@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'apps.forms',
     'apps.analytics',
     'apps.admin_tui',
+    'apps.instagram',
 ]
 
 MIDDLEWARE = [
