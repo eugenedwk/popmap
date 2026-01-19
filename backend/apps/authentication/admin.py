@@ -18,10 +18,14 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'role', 'identity_provider', 'is_profile_complete', 'created_at']
+    list_display = ['user', 'user_email', 'role', 'identity_provider', 'is_profile_complete', 'created_at']
     list_filter = ['role', 'identity_provider', 'is_profile_complete', 'email_notifications_enabled']
     search_fields = ['user__username', 'user__email', 'cognito_sub']
     readonly_fields = ['cognito_sub', 'created_at', 'updated_at']
+
+    @admin.display(description='Email', ordering='user__email')
+    def user_email(self, obj):
+        return obj.user.email
 
     fieldsets = (
         ('User Information', {
