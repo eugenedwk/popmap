@@ -78,3 +78,6 @@ tmp/
 .vercel
 .ai-plans
 frontend/.env.production
+
+# Worktrees
+.worktrees/
