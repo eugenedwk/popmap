@@ -41,7 +41,7 @@ class VenueAdmin(admin.ModelAdmin):
 
 @admin.register(Business)
 class BusinessAdmin(admin.ModelAdmin):
-    list_display = ['name', 'custom_subdomain', 'instagram_handle', 'is_verified', 'available_for_hire', 'get_categories', 'created_at']
+    list_display = ['name', 'instagram_handle', 'is_verified', 'get_categories', 'created_at', 'custom_subdomain']
     list_filter = ['is_verified', 'available_for_hire', 'categories', 'created_at']
     search_fields = ['name', 'instagram_handle', 'description', 'custom_subdomain', 'owner__email', 'owner__username']
     readonly_fields = ['created_at', 'updated_at', 'get_owner_email']
