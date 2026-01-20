@@ -67,7 +67,8 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Handle 401/403 responses (token expired or invalid)
+// Handle 401 responses (token expired or invalid)
+// Note: 403 (Forbidden) means the user is authenticated but lacks permission - don't sign out
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -77,13 +78,14 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Only clear session if we sent a token and got 401/403
+    // Only clear session if we sent a token and got 401 (unauthorized/expired)
+    // 403 means the user is authenticated but doesn't have permission - don't sign out
     const hadAuthToken = error.config?.headers?.Authorization;
-    const isAuthError = error.response?.status === 401 || error.response?.status === 403;
+    const isUnauthorized = error.response?.status === 401;
 
-    if (hadAuthToken && isAuthError) {
+    if (hadAuthToken && isUnauthorized) {
       console.error('Authentication failed - token may be expired or invalid');
-      // If we sent a token but got 401/403, the token is invalid
+      // If we sent a token but got 401, the token is invalid
       // Clear the session to stop sending bad tokens
       try {
         const { signOut } = await import('aws-amplify/auth');
@@ -111,6 +113,8 @@ export const businessesApi = {
   getById: (id: number): Promise<AxiosResponse<Business>> => apiClient.get(`/businesses/${id}/`),
   getBySubdomain: (subdomain: string): Promise<AxiosResponse<Business>> => apiClient.get(`/businesses/by-subdomain/${subdomain}/`),
   getMyBusinesses: (): Promise<AxiosResponse<Business[]>> => apiClient.get('/businesses/my_businesses/'),
+  // Dashboard endpoint - requires owner authentication
+  getDashboard: (id: number): Promise<AxiosResponse<Business>> => apiClient.get(`/businesses/${id}/dashboard/`),
   create: (data: BusinessFormData): Promise<AxiosResponse<ApiResponse<Business>>> => {
     const formData = new FormData()
     Object.keys(data).forEach(key => {

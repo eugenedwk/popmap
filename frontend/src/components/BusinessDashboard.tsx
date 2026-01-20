@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, Plus, FileText, Eye, Calendar, Edit, Building2, Settings, BarChart3 } from 'lucide-react'
+import { Loader2, Plus, FileText, Eye, Calendar, Edit, Building2, Settings, BarChart3, ShieldAlert, AlertTriangle } from 'lucide-react'
 import { BusinessSubdomainSettings } from './BusinessSubdomainSettings'
 import { BusinessEditForm } from './BusinessEditForm'
 import { FormTemplateBuilder } from './FormTemplateBuilder'
@@ -39,13 +39,20 @@ export function BusinessDashboard() {
   const defaultTab = searchParams.get('tab') || 'events'
 
   const { data: business, isLoading, error } = useQuery({
-    queryKey: ['business', businessId],
+    queryKey: ['business-dashboard', businessId],
     queryFn: async () => {
       if (!businessId) throw new Error('Business ID is required')
-      const response = await businessesApi.getById(businessId)
+      const response = await businessesApi.getDashboard(businessId)
       return response.data
     },
     enabled: !!businessId,
+    retry: (failureCount, error: any) => {
+      // Don't retry on 403 (forbidden) or 404 (not found)
+      if (error?.response?.status === 403 || error?.response?.status === 404) {
+        return false
+      }
+      return failureCount < 3
+    },
   })
 
   // Fetch events associated with this business
@@ -82,15 +89,44 @@ export function BusinessDashboard() {
   }
 
   if (error || !business) {
+    const isAccessDenied = (error as any)?.response?.status === 403
+    const isNotFound = (error as any)?.response?.status === 404
+
     return (
       <div className="h-full flex items-center justify-center p-6">
         <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle className="text-destructive">Error</CardTitle>
-            <CardDescription>
-              Failed to load business information.
-            </CardDescription>
+          <CardHeader className="text-center">
+            {isAccessDenied ? (
+              <>
+                <ShieldAlert className="h-12 w-12 mx-auto text-destructive mb-2" />
+                <CardTitle className="text-destructive">Access Denied</CardTitle>
+                <CardDescription>
+                  You don't have permission to access this dashboard. Only business owners can view this page.
+                </CardDescription>
+              </>
+            ) : isNotFound ? (
+              <>
+                <AlertTriangle className="h-12 w-12 mx-auto text-yellow-500 mb-2" />
+                <CardTitle>Business Not Found</CardTitle>
+                <CardDescription>
+                  The business you're looking for doesn't exist or has been removed.
+                </CardDescription>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="h-12 w-12 mx-auto text-destructive mb-2" />
+                <CardTitle className="text-destructive">Error</CardTitle>
+                <CardDescription>
+                  Failed to load business information. Please try again later.
+                </CardDescription>
+              </>
+            )}
           </CardHeader>
+          <CardContent className="text-center">
+            <Button variant="outline" onClick={() => navigate('/')}>
+              Go Home
+            </Button>
+          </CardContent>
         </Card>
       </div>
     )

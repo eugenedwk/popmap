@@ -97,6 +97,30 @@ class BusinessViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def dashboard(self, request, pk=None):
+        """
+        Get business data for the owner dashboard.
+        Only accessible by the business owner or staff.
+        """
+        try:
+            business = Business.objects.get(pk=pk)
+        except Business.DoesNotExist:
+            return Response(
+                {'error': 'Business not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check if user is owner or staff
+        if not request.user.is_staff and business.owner != request.user:
+            return Response(
+                {'error': 'You do not have permission to access this dashboard'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = self.get_serializer(business)
+        return Response(serializer.data)
+
 
 class VenueViewSet(viewsets.ModelViewSet):
     """
