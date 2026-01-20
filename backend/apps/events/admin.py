@@ -41,7 +41,7 @@ class VenueAdmin(admin.ModelAdmin):
 
 @admin.register(Business)
 class BusinessAdmin(admin.ModelAdmin):
-    list_display = ['name', 'instagram_url', 'is_verified', 'get_categories', 'created_at', 'custom_subdomain']
+    list_display = ['name', 'get_instagram_handle', 'has_logo', 'is_verified', 'get_categories', 'created_at', 'custom_subdomain']
     list_filter = ['is_verified', 'available_for_hire', 'categories', 'created_at']
     search_fields = ['name', 'instagram_url', 'description', 'custom_subdomain', 'owner__email', 'owner__username']
     readonly_fields = ['created_at', 'updated_at', 'get_owner_email']
@@ -93,6 +93,23 @@ class BusinessAdmin(admin.ModelAdmin):
         """Display categories as comma-separated list"""
         return ", ".join([cat.name for cat in obj.categories.all()])
     get_categories.short_description = 'Categories'
+
+    def get_instagram_handle(self, obj):
+        """Display Instagram handle without the full URL"""
+        if obj.instagram_url:
+            import re
+            # Strip common Instagram URL prefixes
+            handle = re.sub(r'^https?://(www\.)?instagram\.com/', '', obj.instagram_url)
+            return handle.rstrip('/')
+        return '-'
+    get_instagram_handle.short_description = 'Instagram'
+    get_instagram_handle.admin_order_field = 'instagram_url'
+
+    def has_logo(self, obj):
+        """Boolean indicating if business has a profile photo"""
+        return bool(obj.logo)
+    has_logo.boolean = True
+    has_logo.short_description = 'Logo'
 
 
 @admin.register(Event)
