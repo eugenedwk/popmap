@@ -70,6 +70,14 @@ class Business(models.Model):
         help_text="Custom subdomain for this business (e.g., 'mybusiness' for mybusiness.popmap.co)"
     )
 
+    # Instagram integration
+    instagram_handle = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True,
+        help_text="Instagram username (without @) for importing events"
+    )
+
     # Active form template to display on profile
     active_form_template = models.ForeignKey(
         'forms.FormTemplate',

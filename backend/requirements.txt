@@ -35,3 +35,5 @@ googlemaps==4.10.0
 # TUI Admin Dashboard
 textual>=0.47.0
 rich>=13.7.0
+# LLM for Instagram event extraction
+anthropic>=0.18.0

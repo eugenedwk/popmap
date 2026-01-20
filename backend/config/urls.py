@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/billing/', include('apps.billing.urls')),
     path('api/forms/', include('apps.forms.urls')),
     path('api/analytics/', include('apps.analytics.urls')),
+    path('api/instagram/', include('apps.instagram.urls')),
 ]
 
 if settings.DEBUG:

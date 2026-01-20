@@ -90,6 +90,8 @@ class BusinessSerializer(serializers.ModelSerializer):
             'logo', 'categories', 'category_ids', 'custom_subdomain',
             'can_use_custom_subdomain', 'subdomain_url',
             'active_form_template', 'active_form_template_id',
+            # Instagram integration
+            'instagram_handle',
             # Background options
             'background_image', 'background_image_url', 'background_color',
             'background_overlay_opacity',
