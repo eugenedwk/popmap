@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,10 +20,14 @@ type SignupStep = 'role' | 'details' | 'verify';
 
 export function Signup() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signUpWithEmail, confirmSignUp, signInWithSocial } = useAuth();
 
+  // Pre-select business_owner if ?role=business is in URL
+  const initialRole = searchParams.get('role') === 'business' ? 'business_owner' : 'attendee';
+
   const [step, setStep] = useState<SignupStep>('role');
-  const [role, setRole] = useState<'business_owner' | 'attendee'>('attendee');
+  const [role, setRole] = useState<'business_owner' | 'attendee'>(initialRole);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -198,6 +202,18 @@ export function Signup() {
               </div>
             </RadioGroup>
 
+            {/* Divider with text */}
+            <div className="relative pt-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Create account with
+                </span>
+              </div>
+            </div>
+
             <Button
               onClick={() => handleRoleSelection(role)}
               className="w-full"
@@ -206,7 +222,7 @@ export function Signup() {
               Continue as {role === 'attendee' ? 'Attendee' : 'Business Owner'}
             </Button>
 
-            <div className="relative">
+            <div className="relative pt-2">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
