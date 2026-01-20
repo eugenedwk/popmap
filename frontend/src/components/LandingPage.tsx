@@ -32,7 +32,7 @@ export function LandingPage() {
             Instagram, managing DMs, and hoping customers find you.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" onClick={() => navigate('/signup')} className="text-lg px-8">
+            <Button size="lg" onClick={() => navigate('/signup?role=business')} className="text-lg px-8">
               List Your Popup Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
@@ -52,7 +52,7 @@ export function LandingPage() {
           <div className="grid md:grid-cols-3 gap-6">
             <Card className="border-destructive/20 bg-destructive/5">
               <CardContent className="pt-6">
-                <div className="text-destructive mb-4">
+                <div className="text-destructive mb-4 pt-2">
                   <Clock className="h-8 w-8" />
                 </div>
                 <h4 className="font-semibold mb-2">Hours Lost to Admin</h4>
@@ -64,7 +64,7 @@ export function LandingPage() {
             </Card>
             <Card className="border-destructive/20 bg-destructive/5">
               <CardContent className="pt-6">
-                <div className="text-destructive mb-4">
+                <div className="text-destructive mb-4 pt-2">
                   <Users className="h-8 w-8" />
                 </div>
                 <h4 className="font-semibold mb-2">Customers Can't Find You</h4>
@@ -76,7 +76,7 @@ export function LandingPage() {
             </Card>
             <Card className="border-destructive/20 bg-destructive/5">
               <CardContent className="pt-6">
-                <div className="text-destructive mb-4">
+                <div className="text-destructive mb-4 pt-2">
                   <Star className="h-8 w-8" />
                 </div>
                 <h4 className="font-semibold mb-2">Yelp's Review Roulette</h4>
@@ -311,7 +311,7 @@ export function LandingPage() {
             <Button
               size="lg"
               variant="secondary"
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/signup?role=business')}
               className="text-lg px-8"
             >
               List Your Popup Free
@@ -332,7 +332,7 @@ export function LandingPage() {
             <a href="/brands" className="hover:text-foreground transition-colors">
               Browse Vendors
             </a>
-            <a href="/signup" className="hover:text-foreground transition-colors">
+            <a href="/signup?role=business" className="hover:text-foreground transition-colors">
               List Your Popup
             </a>
           </div>
