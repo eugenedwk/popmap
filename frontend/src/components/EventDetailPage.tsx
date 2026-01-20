@@ -34,6 +34,14 @@ function EventDetailPage() {
   const [guestRsvpStatus, setGuestRsvpStatus] = useState<'interested' | 'going' | null>(null)
   const [guestRsvpError, setGuestRsvpError] = useState<string | null>(null)
   const [guestRsvpSuccess, setGuestRsvpSuccess] = useState(false)
+  // Cancellation token for secure guest RSVP cancellation
+  const [cancellationToken, setCancellationToken] = useState<string | null>(() => {
+    // Try to restore from localStorage on mount
+    if (eventId) {
+      return localStorage.getItem(`rsvp_cancel_token_${eventId}`)
+    }
+    return null
+  })
 
   const { data: event, isLoading, error } = useQuery({
     queryKey: ['event', eventId],
@@ -92,9 +100,15 @@ function EventDetailPage() {
       if (!eventId) throw new Error('Event ID is required')
       return eventsApi.guestRsvp(eventId, data)
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       setGuestRsvpSuccess(true)
       setGuestRsvpError(null)
+      // Store cancellation token for secure cancellation later
+      const token = response.data.cancellation_token
+      if (token && eventId) {
+        setCancellationToken(token)
+        localStorage.setItem(`rsvp_cancel_token_${eventId}`, token)
+      }
       queryClient.invalidateQueries({ queryKey: ['event', eventId] })
     },
     onError: (error: any) => {
@@ -107,15 +121,20 @@ function EventDetailPage() {
     },
   })
 
-  // Cancel guest RSVP mutation
+  // Cancel guest RSVP mutation (requires cancellation token for security)
   const cancelGuestRsvpMutation = useMutation({
-    mutationFn: (email: string) => {
+    mutationFn: (token: string) => {
       if (!eventId) throw new Error('Event ID is required')
-      return eventsApi.cancelGuestRsvp(eventId, email)
+      return eventsApi.cancelGuestRsvp(eventId, token)
     },
     onSuccess: () => {
       setGuestRsvpSuccess(false)
       setGuestRsvpStatus(null)
+      setCancellationToken(null)
+      // Clear stored token
+      if (eventId) {
+        localStorage.removeItem(`rsvp_cancel_token_${eventId}`)
+      }
       queryClient.invalidateQueries({ queryKey: ['event', eventId] })
     },
   })
@@ -156,8 +175,8 @@ function EventDetailPage() {
   }
 
   const handleCancelGuestRsvp = () => {
-    if (guestEmail) {
-      cancelGuestRsvpMutation.mutate(guestEmail)
+    if (cancellationToken) {
+      cancelGuestRsvpMutation.mutate(cancellationToken)
     }
   }
 

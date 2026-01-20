@@ -2,7 +2,17 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.throttling import AnonRateThrottle
 from django.db import transaction
+
+
+class FormSubmissionThrottle(AnonRateThrottle):
+    """
+    Rate limit for form submissions to prevent spam.
+    Limits anonymous submissions to 10 per minute per IP.
+    """
+    rate = '10/minute'
+    scope = 'form_submission'
 from .models import (
     FormTemplate, FormField, FormFieldOption,
     FormSubmission, FormResponse
@@ -71,11 +81,13 @@ class FormTemplateViewSet(viewsets.ModelViewSet):
 
         serializer.save(created_by=self.request.user)
 
-    @action(detail=True, methods=['post'], permission_classes=[AllowAny])
+    @action(detail=True, methods=['post'], permission_classes=[AllowAny], throttle_classes=[FormSubmissionThrottle])
     def submit(self, request, pk=None):
         """
         POST /api/forms/templates/{id}/submit/
         Submit a form with responses
+
+        Security: Rate limited to 10 submissions per minute per IP to prevent spam.
         """
         form_template = self.get_object()
 

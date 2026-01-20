@@ -294,11 +294,15 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
             )
 
         # Check if user owns this event or its business
+        # Security: Explicitly handle NULL host_business case
         user_businesses = request.user.businesses.all()
+        user_business_ids = list(user_businesses.values_list('id', flat=True))
+
         is_owner = (
             event.created_by == request.user or
-            event.host_business in user_businesses or
-            event.businesses.filter(id__in=user_businesses).exists()
+            request.user.is_staff or
+            (event.host_business is not None and event.host_business.id in user_business_ids) or
+            event.businesses.filter(id__in=user_business_ids).exists()
         )
 
         if not is_owner:

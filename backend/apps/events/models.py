@@ -415,6 +415,14 @@ class EventRSVP(models.Model):
         null=True,
         help_text="Email for guest RSVPs (when user is not logged in)"
     )
+    # Cancellation token for guest RSVPs (allows secure cancellation without login)
+    cancellation_token = models.UUIDField(
+        default=uuid.uuid4,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Token for guest to cancel their RSVP securely"
+    )
     guest_name = models.CharField(
         max_length=255,
         blank=True,

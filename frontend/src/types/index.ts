@@ -132,9 +132,9 @@ export interface GuestRSVPFormData {
 }
 
 // Guest RSVP check response
+// Note: status field removed for security (prevents email enumeration)
 export interface GuestRSVPCheckResponse {
   has_rsvp: boolean
-  status: 'interested' | 'going' | null
 }
 
 // Form data types

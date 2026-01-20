@@ -186,10 +186,12 @@ export const eventsApi = {
     apiClient.get('/events/my_rsvps/'),
 
   // Guest RSVP (no authentication required)
-  guestRsvp: (eventId: number, data: GuestRSVPFormData): Promise<AxiosResponse<ApiResponse<EventRSVP>>> =>
+  // Returns cancellation_token that must be stored for later cancellation
+  guestRsvp: (eventId: number, data: GuestRSVPFormData): Promise<AxiosResponse<ApiResponse<EventRSVP> & { cancellation_token: string }>> =>
     apiClient.post(`/events/${eventId}/guest_rsvp/`, data),
-  cancelGuestRsvp: (eventId: number, guestEmail: string): Promise<AxiosResponse<{ message: string }>> =>
-    apiClient.post(`/events/${eventId}/cancel_guest_rsvp/`, { guest_email: guestEmail }),
+  // Security: Now requires cancellation_token instead of email to prevent unauthorized cancellations
+  cancelGuestRsvp: (eventId: number, cancellationToken: string): Promise<AxiosResponse<{ message: string }>> =>
+    apiClient.post(`/events/${eventId}/cancel_guest_rsvp/`, { cancellation_token: cancellationToken }),
   checkGuestRsvp: (eventId: number, email: string): Promise<AxiosResponse<GuestRSVPCheckResponse>> =>
     apiClient.get(`/events/${eventId}/check_guest_rsvp/`, { params: { email } }),
 }

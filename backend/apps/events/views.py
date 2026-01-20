@@ -144,6 +144,23 @@ class VenueViewSet(viewsets.ModelViewSet):
             return Venue.objects.all()
         return Venue.objects.filter(business__owner=user)
 
+    def perform_create(self, serializer):
+        """Validate that user owns the business before creating a venue"""
+        business = serializer.validated_data.get('business')
+        if business and business.owner != self.request.user and not self.request.user.is_staff:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not own this business")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        """Validate that user owns the business before updating a venue"""
+        # Check if business is being changed
+        business = serializer.validated_data.get('business')
+        if business and business.owner != self.request.user and not self.request.user.is_staff:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not own this business")
+        serializer.save()
+
     @action(detail=False, methods=['get'])
     def for_business(self, request):
         """Get venues for a specific business"""
@@ -372,10 +389,12 @@ class EventViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            business = Business.objects.get(id=business_id)
+            # Security: Only allow verified businesses to leave events
+            # (consistent with join endpoint which requires is_verified=True)
+            business = Business.objects.get(id=business_id, is_verified=True)
         except Business.DoesNotExist:
             return Response(
-                {'error': 'Business not found'},
+                {'error': 'Business not found or not verified'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -508,11 +527,15 @@ class EventViewSet(viewsets.ModelViewSet):
             serializer = EventRSVPSerializer(rsvp)
             message = 'RSVP created successfully' if created else 'RSVP updated successfully'
 
+            # Include cancellation_token so guest can cancel their RSVP
+            response_data = {
+                'message': message,
+                'data': serializer.data,
+                'cancellation_token': str(rsvp.cancellation_token)
+            }
+
             return Response(
-                {
-                    'message': message,
-                    'data': serializer.data
-                },
+                response_data,
                 status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
             )
         except Exception as e:
@@ -543,20 +566,26 @@ class EventViewSet(viewsets.ModelViewSet):
     def cancel_guest_rsvp(self, request, pk=None):
         """
         Cancel/delete a guest RSVP for an event.
-        Body: { "guest_email": "..." }
-        TODO: GDPR Compliance - Consider email verification before deletion
+        Body: { "cancellation_token": "uuid-token" }
+
+        Security: Requires the cancellation token that was provided when the RSVP was created.
+        This prevents unauthorized cancellation of other users' RSVPs.
         """
         event = self.get_object()
-        guest_email = request.data.get('guest_email')
+        cancellation_token = request.data.get('cancellation_token')
 
-        if not guest_email:
+        if not cancellation_token:
             return Response(
-                {'error': 'guest_email is required'},
+                {'error': 'cancellation_token is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
-            rsvp = EventRSVP.objects.get(event=event, guest_email=guest_email, user__isnull=True)
+            rsvp = EventRSVP.objects.get(
+                event=event,
+                cancellation_token=cancellation_token,
+                user__isnull=True
+            )
             rsvp.delete()
             return Response(
                 {'message': 'RSVP cancelled successfully'},
@@ -564,7 +593,7 @@ class EventViewSet(viewsets.ModelViewSet):
             )
         except EventRSVP.DoesNotExist:
             return Response(
-                {'error': 'No RSVP found for this email'},
+                {'error': 'Invalid cancellation token or RSVP not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -580,6 +609,9 @@ class EventViewSet(viewsets.ModelViewSet):
         """
         Check if a guest email has already RSVP'd to this event.
         Query param: ?email=guest@example.com
+
+        Security note: Only returns whether an RSVP exists, not the status,
+        to limit information disclosure for email enumeration prevention.
         """
         event = self.get_object()
         guest_email = request.query_params.get('email')
@@ -590,17 +622,14 @@ class EventViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            rsvp = EventRSVP.objects.get(event=event, guest_email=guest_email, user__isnull=True)
-            return Response({
-                'has_rsvp': True,
-                'status': rsvp.status
-            })
-        except EventRSVP.DoesNotExist:
-            return Response({
-                'has_rsvp': False,
-                'status': None
-            })
+        # Only return whether RSVP exists, not the status (prevents enumeration)
+        has_rsvp = EventRSVP.objects.filter(
+            event=event,
+            guest_email=guest_email,
+            user__isnull=True
+        ).exists()
+
+        return Response({'has_rsvp': has_rsvp})
 
 
 from rest_framework.views import APIView
@@ -636,9 +665,10 @@ class GuestUnsubscribeView(APIView):
             pref.event_reminders_enabled = False
             pref.save()
 
+            # Security: Don't expose email in response to prevent enumeration
             return Response({
                 'message': 'You have been unsubscribed from event reminders.',
-                'email': pref.email
+                'success': True
             })
         except GuestEmailPreference.DoesNotExist:
             return Response(
@@ -660,7 +690,7 @@ class GuestResubscribeView(APIView):
 
         if not token:
             return Response(
-                {'error': 'Unsubscribe token is required'},
+                {'error': 'Resubscribe token is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -669,9 +699,10 @@ class GuestResubscribeView(APIView):
             pref.event_reminders_enabled = True
             pref.save()
 
+            # Security: Don't expose email in response to prevent enumeration
             return Response({
                 'message': 'You have been resubscribed to event reminders.',
-                'email': pref.email
+                'success': True
             })
         except GuestEmailPreference.DoesNotExist:
             return Response(
