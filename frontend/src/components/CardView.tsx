@@ -15,6 +15,35 @@ import {
 } from '@/components/ui/select'
 import { Calendar, Clock, MapPin, Search } from 'lucide-react'
 
+// Seeded random shuffle for consistent randomization per event
+const seededShuffle = (array, seed) => {
+  const shuffled = [...array]
+  let currentIndex = shuffled.length
+
+  // Simple seeded random number generator
+  const seededRandom = () => {
+    seed = (seed * 9301 + 49297) % 233280
+    return seed / 233280
+  }
+
+  while (currentIndex > 0) {
+    const randomIndex = Math.floor(seededRandom() * currentIndex)
+    currentIndex--
+    ;[shuffled[currentIndex], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[currentIndex]]
+  }
+
+  return shuffled
+}
+
+// Get preview businesses (max 5, randomized)
+const getPreviewBusinesses = (businesses, eventId) => {
+  if (!businesses || businesses.length === 0) return { preview: [], hasMore: false }
+  if (businesses.length <= 5) return { preview: businesses, hasMore: false }
+
+  const shuffled = seededShuffle(businesses, eventId)
+  return { preview: shuffled.slice(0, 5), hasMore: true }
+}
+
 function CardView({ onBusinessClick }) {
   const navigate = useNavigate()
   const { data: events, isLoading, error } = useActiveEvents()
@@ -226,20 +255,28 @@ function CardView({ onBusinessClick }) {
                           <CardDescription className="line-clamp-1">
                             {event.businesses && event.businesses.length > 0 ? (
                               <span>
-                                {event.businesses.map((business, index) => (
-                                  <span key={business.id}>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        onBusinessClick?.(business.id)
-                                      }}
-                                      className="hover:underline hover:text-primary transition-colors"
-                                    >
-                                      {business.name}
-                                    </button>
-                                    {index < event.businesses.length - 1 && ', '}
-                                  </span>
-                                ))}
+                                {(() => {
+                                  const { preview, hasMore } = getPreviewBusinesses(event.businesses, event.id)
+                                  return (
+                                    <>
+                                      {preview.map((business, index) => (
+                                        <span key={business.id}>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              onBusinessClick?.(business.id)
+                                            }}
+                                            className="hover:underline hover:text-primary transition-colors"
+                                          >
+                                            {business.name}
+                                          </button>
+                                          {index < preview.length - 1 && ', '}
+                                        </span>
+                                      ))}
+                                      {hasMore && ', ...'}
+                                    </>
+                                  )
+                                })()}
                               </span>
                             ) : (
                               event.business_names
