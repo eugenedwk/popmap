@@ -41,9 +41,9 @@ class VenueAdmin(admin.ModelAdmin):
 
 @admin.register(Business)
 class BusinessAdmin(admin.ModelAdmin):
-    list_display = ['name', 'instagram_handle', 'is_verified', 'get_categories', 'created_at', 'custom_subdomain']
+    list_display = ['name', 'instagram_url', 'is_verified', 'get_categories', 'created_at', 'custom_subdomain']
     list_filter = ['is_verified', 'available_for_hire', 'categories', 'created_at']
-    search_fields = ['name', 'instagram_handle', 'description', 'custom_subdomain', 'owner__email', 'owner__username']
+    search_fields = ['name', 'instagram_url', 'description', 'custom_subdomain', 'owner__email', 'owner__username']
     readonly_fields = ['created_at', 'updated_at', 'get_owner_email']
     filter_horizontal = ['categories']
 
@@ -52,7 +52,7 @@ class BusinessAdmin(admin.ModelAdmin):
             'fields': ('name', 'description', 'logo', 'categories')
         }),
         ('Contact & Social', {
-            'fields': ('instagram_handle', 'contact_email', 'contact_phone', 'website', 'instagram_url', 'tiktok_url')
+            'fields': ('instagram_url', 'contact_email', 'contact_phone', 'website', 'tiktok_url')
         }),
         ('Custom Subdomain', {
             'fields': ('custom_subdomain',),
