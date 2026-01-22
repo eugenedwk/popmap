@@ -25,6 +25,8 @@ import { FormSubmissionsList } from './components/FormSubmissionsList';
 import { BusinessAccountDropdown } from './components/BusinessAccountDropdown';
 import { BillingPage } from './components/BillingPage';
 import { SubdomainRedirect } from './components/SubdomainRedirect';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { TermsOfService } from './components/TermsOfService';
 import { useAuth } from './contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
@@ -242,6 +244,10 @@ function AppContent() {
           <Route path="/login" element={<div className="flex-1 overflow-auto"><Login /></div>} />
           <Route path="/callback" element={<div className="flex-1 overflow-auto"><AuthCallback /></div>} />
           <Route path="/onboarding/business" element={<div className="flex-1 overflow-auto"><BusinessOnboarding /></div>} />
+
+          {/* Legal Pages - Full screen, no sidebar, scrollable */}
+          <Route path="/privacy" element={<div className="flex-1 overflow-auto"><PrivacyPolicy /></div>} />
+          <Route path="/terms" element={<div className="flex-1 overflow-auto"><TermsOfService /></div>} />
 
           {/* Form Builder Routes - Full screen, no sidebar, scrollable */}
           <Route path="/forms/:templateId/submissions" element={<div className="flex-1 overflow-auto"><FormSubmissionsList /></div>} />
